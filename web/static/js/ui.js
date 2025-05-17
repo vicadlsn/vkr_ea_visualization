@@ -1,11 +1,16 @@
-import * as func from "./func.js";
-import { plotSurface, resetCamera, addMinimum } from "./plot.js";
+import {
+    getFunctionData,
+    getFunctionLabels,
+    builtinFunctions,
+} from "./func.js";
+
+import { plotSurface, resetCamera, addPoints, addMinimum } from "./plot.js";
 
 export { updatePlot, updateMethodInfo };
 
 export let state = {
     currentFunction: {
-        function: func.getFunctionData("cos(x^2+y^2)"),
+        function: getFunctionData("cos(x^2+y^2)"),
         boundsX: [-5, 5],
         boundsY: [-5, 5],
     },
@@ -94,7 +99,7 @@ function setInput(inputElement, valid) {
 }
 
 function handleFunctionChange(inputElement, selectElement, functionError) {
-    const data = func.getFunctionData(inputElement.value);
+    const data = getFunctionData(inputElement.value);
     if (data) {
         setInput(inputElement, true);
 
@@ -172,7 +177,7 @@ function setupEventListeners() {
 
     functionSelectBuiltin.addEventListener("change", (event) => {
         const target = event.target;
-        const builtin = func.builtinFunctions[target.value];
+        const builtin = builtinFunctions[target.value];
         functionInput.value = builtin.original;
 
         setInput(functionInput, true);
@@ -182,9 +187,7 @@ function setupEventListeners() {
         yRangeMin.value = String(builtin.boundsY[0]);
         yRangeMax.value = String(builtin.boundsY[1]);
 
-        state.currentFunction.function = func.getFunctionData(
-            functionInput.value
-        );
+        state.currentFunction.function = getFunctionData(functionInput.value);
         state.currentFunction.boundsX = [...builtin.boundsX];
         state.currentFunction.boundsY = [...builtin.boundsY];
 
@@ -303,15 +306,33 @@ function setupAlgorithmParams() {
     updateCulturalParams();
 }
 
+function initTestFunctionOptions() {
+    const select = document.getElementById("functionSelectBuiltin");
+    select.length = 1;
+
+    for (const { key, name } of getFunctionLabels()) {
+        const option = document.createElement("option");
+        option.value = key;
+        option.textContent = name;
+        select.appendChild(option);
+    }
+}
+
 function setupUI() {
+    initTestFunctionOptions();
+
     const showPopulation = document.getElementById("showPopulation");
+    showPopulation.textContent = state.plotSettings.showPopulation
+        ? "Вся популяция"
+        : "Только минимум";
+
     showPopulation.addEventListener("click", () => {
         state.plotSettings.showPopulation = !state.plotSettings.showPopulation;
         showPopulation.textContent = state.plotSettings.showPopulation
             ? "Вся популяция"
             : "Только минимум";
         //updatePlot();
-        tab = getCurrentTabData();
+        let tab = getCurrentTabData();
         addPoints(
             state.currentFunction,
             tab.population,

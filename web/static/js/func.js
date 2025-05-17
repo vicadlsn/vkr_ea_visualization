@@ -1,21 +1,40 @@
-export { builtinFunctions, getFunctionData, evaluateFunction };
+export {
+    builtinFunctions,
+    getFunctionData,
+    evaluateFunction,
+    getFunctionLabels,
+};
+
 const builtinFunctions = {};
 builtinFunctions["rastrigin"] = {
     original:
         "20 + (x * x - 10 * cos(2 * pi * x)) + (y * y - 10 * cos(2 * pi * y))",
     boundsX: [-5.12, 5.12],
     boundsY: [-5.12, 5.12],
+    name: "Функция Растригина",
 };
 builtinFunctions["rosenbrock"] = {
     original: "(1-x)^2 + 100*(y - x^2)^2",
     boundsX: [-5, 5],
     boundsY: [-5, 5],
+    name: "Функция Розенброка",
 };
 
 builtinFunctions["schwefel"] = {
     original: "-x * sin(sqrt(abs(x))) - y*sin(sqrt(abs(y)))",
     boundsX: [-100, 100],
     boundsY: [-100, 100],
+    name: "Функция Швефеля",
+};
+
+const getFunctionLabels = () => {
+    const entries = Object.entries(builtinFunctions);
+    return entries.map(([key, value]) => {
+        return {
+            key: key,
+            name: value.name,
+        };
+    });
 };
 
 const getFunctionData = (expression) => {
