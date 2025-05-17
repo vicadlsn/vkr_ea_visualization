@@ -186,7 +186,7 @@ function updateGraph(f, plotSettings, population, minimum) {
     );
 
     let { geometry, vertices } = getSurfaceGeometry(f, { x, y, z });
-    let colors = getSurfaceColors({ x, y, z }, vertices);
+    let colors = getSurfaceColors({ x, y, z });
     surface = getSurface(geometry, colors);
 
     const { width, height, zMax, zMin, depth } = calculateRanges(
@@ -326,7 +326,6 @@ function applyEqualScale(boundsX, boundsY, zMax, zMin) {
     const xSize = boundsX[1] - boundsX[0];
     const ySize = boundsY[1] - boundsY[0];
     const zSize = zMax - zMin;
-    //const maxSize = Math.max(xSize, ySize, zSize);
 
     surface.scale.set(
         scaleFactor / xSize,
@@ -386,6 +385,55 @@ function getSurfaceGeometry(f, data) {
     geometry.computeVertexNormals();
     return { geometry, vertices };
 }
+/*
+function addGridToSurface(x, y, z, scene) {
+    surfaceGrid = new THREE.Group();
+
+    // Генерация линий для сетки по оси X
+    for (let i = 0; i < x.length; i++) {
+        let lineGeometry = new THREE.BufferGeometry();
+        let positions = [];
+
+        // Добавление точек для линии вдоль оси X
+        for (let j = 0; j < y.length; j++) {
+            positions.push(x[i], y[j], z[i][j]);
+        }
+
+        // Установка вершин в BufferGeometry
+        lineGeometry.setAttribute(
+            "position",
+            new THREE.Float32BufferAttribute(positions, 3)
+        );
+
+        let lineMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
+        let line = new THREE.Line(lineGeometry, lineMaterial);
+        surfaceGrid.add(line);
+    }
+
+    // Генерация линий для сетки по оси Y
+    for (let j = 0; j < y.length; j++) {
+        let lineGeometry = new THREE.BufferGeometry();
+        let positions = [];
+
+        // Добавление точек для линии вдоль оси Y
+        for (let i = 0; i < x.length; i++) {
+            positions.push(x[i], y[j], z[i][j]);
+        }
+
+        // Установка вершин в BufferGeometry
+        lineGeometry.setAttribute(
+            "position",
+            new THREE.Float32BufferAttribute(positions, 3)
+        );
+
+        let lineMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
+        let line = new THREE.Line(lineGeometry, lineMaterial);
+        surfaceGrid.add(line);
+    }
+
+    scene.add(surfaceGrid);
+}
+*/
 
 function addGridToSurface(x, y, z, scene) {
     if (surfaceGrid) {
@@ -393,36 +441,35 @@ function addGridToSurface(x, y, z, scene) {
         disposeObject(surfaceGrid);
     }
 
-    const geometry = surface.geometry; // Используем геометрию поверхности
+    const geometry = surface.geometry;
     const wireframeGeometry = new THREE.WireframeGeometry(geometry);
     const wireframeMaterial = new THREE.LineBasicMaterial({
         color: 0x888888,
-        opacity: 0.5,
+        opacity: 0.7,
         transparent: true,
     });
     surfaceGrid = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
 
     surfaceGrid.scale.set(surface.scale.x, surface.scale.y, surface.scale.z);
-    surfaceGrid.rotateX(-Math.PI / 2);
+    //surfaceGrid.rotateX(-Math.PI / 2);
     scene.add(surfaceGrid);
 }
 
-function getSurfaceColors(data, vertices) {
+function getSurfaceColors(data) {
     const { x, y, z } = data;
     const allZValues = z.flat();
     const minZ = Math.min(...allZValues);
     const maxZ = Math.max(...allZValues);
 
-    const colors = new Float32Array(vertices.length * 3); // Каждый цвет будет занимать 3 индекса (HSL)
+    const colors = new Float32Array(x.length * y.length * 3);
 
-    // Заполнение массива цветов для каждой вершины
     for (let i = 0; i < x.length; i++) {
         for (let j = 0; j < y.length; j++) {
-            let value = (z[i][j] - minZ) / (maxZ - minZ); // Нормализуем значение Z
+            let value = (z[i][j] - minZ) / (maxZ - minZ); // нормализуем значение Z
             // Логарифмическая трансформация для сглаживания значений
             value = Math.log(1 + z[i][j] - minZ) / Math.log(1 + maxZ - minZ);
 
-            const hue = value * 240; // В диапазоне от 0 до 240
+            const hue = (1 - value) * 240; // от синего (240) к красному (0)
 
             const saturation = 0.6;
             const lightness = 0.5;
@@ -436,9 +483,9 @@ function getSurfaceColors(data, vertices) {
 
             const idx = (i * y.length + j) * 3; // Индекс для RGB (умножаем на 3)
 
-            colors[idx] = color.b;
+            colors[idx] = color.r;
             colors[idx + 1] = color.g;
-            colors[idx + 2] = color.r;
+            colors[idx + 2] = color.b;
         }
     }
 
