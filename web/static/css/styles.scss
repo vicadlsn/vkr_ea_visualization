@@ -1,0 +1,343 @@
+// styles.scss
+$primary-color: #e6e7ee;
+$accent-color: #2d4cc8;
+$tertiary: #e6e7ee;
+$text-color-grey: #595959;
+
+$accent-color-dark: darken($accent-color, 12%);
+
+$box-shadow-light: 2px 2px 5px #babecc, -5px -5px 10px #ffffff73;
+$box-shadow-light-tab-buttons-inner: 2px 2px 5px #babecc;
+$box-shadow-inset-active: inset 2px 2px 5px darken($accent-color, 12%),
+    inset -5px -5px 10px $accent-color-dark;
+$border-radius-standard: 12px;
+
+/* Стили для полос прокрутки */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #fff4 #0004;
+}
+
+*::-webkit-scrollbar {
+    height: 12px;
+    width: 12px;
+}
+
+*::-webkit-scrollbar-track {
+    background: #fff4;
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: #fff4;
+    border: 0.5px solid rgba(0, 0, 0, 0.04);
+}
+
+/* Общие стили */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /*background: #dde1e7;*/
+    background: $primary-color;
+}
+
+/* Контейнер с боковой панелью и контентом */
+.container {
+    width: 100vw;
+    height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+}
+/* Контейнер с графиком */
+.content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Боковая панель */
+.shadow-container {
+    box-shadow: 7px 7px 19px #b1b1b1, -7px -7px 19px #ffffff;
+    box-shadow: -3px -3px 7px #ffffff73, 2px 2px 5px #5e687949;
+}
+
+.sidebar {
+    width: min(320px, 30vw);
+    margin-right: 20px; /* Отступ между блоками */
+    border-top-left-radius: 41px;
+    border-bottom-left-radius: 41px;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+select {
+    background-color: $primary-color;
+    font-size: 16px;
+    padding-right: 30px;
+}
+
+/* График */
+.graph {
+    width: 100%;
+    height: 100%;
+    border-top-right-radius: 41px;
+    border-bottom-right-radius: 41px;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+/* Контейнер для управления графиком */
+.controls-container {
+    width: 100%;
+    border-top-right-radius: 41px;
+    border-bottom-right-radius: 41px;
+    height: auto;
+    overflow: hidden;
+    display: flex;
+    align-items: center; /* Выравнивание по вертикали */
+    justify-content: space-between; //flex-start; /* Выравнивание по горизонтали */
+    flex-wrap: wrap; /* перенос элементов на новые строки, если не помещаются */
+    gap: 15px;
+
+    box-sizing: border-box;
+    color: $text-color-grey;
+    padding: 10px 20px;
+    /*padding: 0px 20px 10px 20px;
+    */
+}
+
+.controls-container button {
+    padding: 8px 16px;
+}
+
+.aspect-ratio-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Для ввода */
+input:not([type="range"]),
+select {
+    border: none;
+    outline: none;
+    border-radius: 15px;
+    padding: 1em;
+    background-color: #f0f0f0;
+    box-shadow: inset 4px 4px 6px #cccccc, inset -4px -4px 6px #f4f4f4;
+}
+
+select:not(:focus) {
+    box-shadow: inset 4px 4px 6px #cccccc, inset -4px -4px 6px #eeeeee;
+}
+select:focus {
+    border-color: #cccccc;
+    box-shadow: none;
+}
+
+#functionError {
+    font-size: 14px;
+    font-weight: 600;
+    color: #800202;
+    display: none;
+}
+
+input:not([type="range"]):focus {
+    box-shadow: inset 1px 1px 2px #babecc, inset -1px -1px 2px #ffffff73;
+}
+
+.invalid {
+    border: 1px solid #800202 !important;
+    box-shadow: 2px 2px 6px rgba(128, 2, 2, 0.2),
+        -2px -2px 6px rgba(128, 2, 2, 0.2) !important;
+}
+
+/* Ползунки */
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 5px;
+    background-color: transparent;
+    outline: none;
+    box-shadow: inset 2px 2px 6px #b3b3b3, inset -2px -2px 6px #eeeeee;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: grab;
+    background-color: #e9e9e9;
+    border: 1px solid #cccccc;
+    box-shadow: -3px -3px 7px #ffffff, 2px 2px 5px #5e687949;
+    border-radius: 68.8px;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-thumb {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: grab;
+    background-color: #e9e9e9;
+    border: 1px solid #cccccc;
+    box-shadow: -3px -3px 7px #ffffff, 2px 2px 5px #5e687949;
+    border-radius: 68.8px;
+}
+
+/**/
+input:not([type="range"]),
+select {
+    width: 100%;
+    border-radius: 12px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+    margin: 10px 5px 10px 5px;
+    padding: 10px;
+    color: #595959;
+    background-color: $primary-color;
+}
+
+label {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.range-inline {
+    display: inline-flex;
+    align-items: center;
+}
+
+.range-inline input {
+    width: 80px;
+    margin: 5 5px;
+}
+
+.range-inline div {
+    font-weight: bold;
+}
+
+#start {
+    margin-top: 20px;
+}
+
+.tabButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 15px 0;
+    align-items: stretch;
+}
+
+.tab-content {
+    display: none;
+}
+
+.active-tab {
+    display: block;
+}
+
+/* Инфо о работе метода */
+.method-info {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: transparent;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 14px;
+    z-index: 20;
+    pointer-events: none;
+}
+
+/* Кнопки */
+.button-base {
+    width: 100%;
+    font-size: 14px;
+    text-align: center;
+    //border: 1px solid #ccc;
+
+    background-color: $primary-color;
+    border-radius: $border-radius-standard;
+    box-shadow: $box-shadow-light;
+    border: none;
+    outline: none;
+    box-sizing: border-box;
+
+    cursor: pointer;
+    font-weight: 600;
+    color: #595959;
+    transition: box-shadow 0.2s ease, background-color 0.15s ease,
+        color 0.15s ease;
+
+    padding: 10px;
+}
+
+button {
+    @extend .button-base;
+    margin: 10px 5px 10px 5px;
+}
+
+.tabButton {
+    @extend .button-base;
+    min-width: 140px;
+    flex: 1;
+
+    margin: 0;
+    padding: 10px 0;
+    border-radius: 0;
+    justify-content: center;
+    box-shadow: $box-shadow-light-tab-buttons-inner;
+    &:first-child {
+        border-top-left-radius: $border-radius-standard;
+        border-top-right-radius: $border-radius-standard;
+        box-shadow: $box-shadow-light;
+    }
+    &:last-child {
+        border-bottom-left-radius: $border-radius-standard;
+        border-bottom-right-radius: $border-radius-standard;
+        border-bottom: none;
+    }
+
+    &.active-button,
+    &:active {
+        background-color: $accent-color;
+        color: #fff;
+        box-shadow: $box-shadow-inset-active;
+    }
+}
+
+button:active {
+    color: #3498db;
+    box-shadow: inset 2px 2px 5px #babecc, inset -5px -5px 10px #ffffff73;
+}
+
+.active-button,
+.tabButton:active,
+.tabButton:first-child.active-button,
+.tabButton:first-child:active {
+    background-color: $accent-color;
+    color: #fff;
+    box-shadow: $box-shadow-inset-active;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
