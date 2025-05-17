@@ -196,7 +196,7 @@ function updateGraph(f, plotSettings, population, minimum) {
     );
 
     if (plotSettings.equalScale) {
-        applyEqualScale(width, height, depth, f.boundsX, f.boundsY, zMax, zMin);
+        applyEqualScale(f.boundsX, f.boundsY, zMax, zMin);
     } else {
         applyRealScale(
             plotSettings,
@@ -320,13 +320,13 @@ function calculateRanges(boundsX, boundsY, z) {
     return { width, height, zMax, zMin, depth };
 }
 
-function applyEqualScale(width, height, depth, boundsX, boundsY, zMax, zMin) {
+function applyEqualScale(boundsX, boundsY, zMax, zMin) {
     // Рассчитываем масштаб для равных пропорций
     const scaleFactor = 10;
     const xSize = boundsX[1] - boundsX[0];
     const ySize = boundsY[1] - boundsY[0];
     const zSize = zMax - zMin;
-    const maxSize = Math.max(xSize, ySize, zSize);
+    //const maxSize = Math.max(xSize, ySize, zSize);
 
     surface.scale.set(
         scaleFactor / xSize,
