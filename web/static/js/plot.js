@@ -388,50 +388,22 @@ function getSurfaceGeometry(f, data) {
 }
 
 function addGridToSurface(x, y, z, scene) {
-    surfaceGrid = new THREE.Group();
-
-    // Генерация линий для сетки по оси X
-    for (let i = 0; i < x.length; i++) {
-        let lineGeometry = new THREE.BufferGeometry();
-        let positions = [];
-
-        // Добавление точек для линии вдоль оси X
-        for (let j = 0; j < y.length; j++) {
-            positions.push(x[i], y[j], z[i][j]);
-        }
-
-        // Установка вершин в BufferGeometry
-        lineGeometry.setAttribute(
-            "position",
-            new THREE.Float32BufferAttribute(positions, 3)
-        );
-
-        let lineMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
-        let line = new THREE.Line(lineGeometry, lineMaterial);
-        surfaceGrid.add(line);
+    if (surfaceGrid) {
+        scene.remove(surfaceGrid);
+        disposeObject(surfaceGrid);
     }
 
-    // Генерация линий для сетки по оси Y
-    for (let j = 0; j < y.length; j++) {
-        let lineGeometry = new THREE.BufferGeometry();
-        let positions = [];
+    const geometry = surface.geometry; // Используем геометрию поверхности
+    const wireframeGeometry = new THREE.WireframeGeometry(geometry);
+    const wireframeMaterial = new THREE.LineBasicMaterial({
+        color: 0x888888,
+        opacity: 0.5,
+        transparent: true,
+    });
+    surfaceGrid = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
 
-        // Добавление точек для линии вдоль оси Y
-        for (let i = 0; i < x.length; i++) {
-            positions.push(x[i], y[j], z[i][j]);
-        }
-
-        // Установка вершин в BufferGeometry
-        lineGeometry.setAttribute(
-            "position",
-            new THREE.Float32BufferAttribute(positions, 3)
-        );
-
-        let lineMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
-        let line = new THREE.Line(lineGeometry, lineMaterial);
-        surfaceGrid.add(line);
-    }
-
+    surfaceGrid.scale.set(surface.scale.x, surface.scale.y, surface.scale.z);
+    surfaceGrid.rotateX(-Math.PI / 2);
     scene.add(surfaceGrid);
 }
 
