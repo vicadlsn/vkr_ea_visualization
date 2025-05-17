@@ -85,6 +85,7 @@ import * as THREE from "three";
 import { OrbitControls } from "OrbitControls";
 
 export { plotSurface, resetCamera, addPoints, addMinimum };
+const sceneBackgroundColor = 0xe6e7ee;
 
 function generateSurfaceData(func, xRange, yRange, resolution = 100) {
     const [xMin, xMax] = xRange;
@@ -128,7 +129,7 @@ function plotSurface(f, plotSettings, population = [], minimum = undefined) {
         container.innerHTML = "";
 
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xe0e0e0);
+        scene.background = new THREE.Color(sceneBackgroundColor);
 
         camera = new THREE.PerspectiveCamera(
             45,
