@@ -95,15 +95,18 @@
 
 
             <div class="content" style="position: relative;">
-                <div class="graph shadow-container" id="graph3d" style="width: 100%; height: 100%;"></div>
+                <div class="graph shadow-container" style="width: 100%; height: 100%;position: relative;">
+
+                    <div id="graph3d" style="width: 100%; height: 100%;display:block;">
+                    </div>
+                    <div id="convergencePlot" style="display: none;"></div>
+
+                    <button id="plotStyle" style="width:100px;">График сходимости</button>
+                </div>
 
                 <div class="method-info">
                     <div id="appState"></div>
                     <div id="methodInfoContent">
-                        <strong>Метод:</strong><br>
-                        <strong>Текущее решение:</strong><br>
-                        <strong>Значение:</strong><br>
-                        <strong>Итерация:</strong><br>
                     </div>
                 </div>
 
@@ -137,9 +140,8 @@
                         </div>
                     </div>
                     <div style="flex-shrink: 0;">
-                        <button id="showPopulation" style="width:100px;">Только минимум</button>
+                        <button id="showMinimum" style="width:100px;">Показать минимум</button>
                     </div>
-
                     <div style="flex-shrink: 0;">
                         <button id="dropCamera" style="width:100px;">Сбросить камеру</button>
                     </div>
@@ -147,13 +149,10 @@
                         <button id="showGrid" style="width:100px;">Показать сетку</button>
                     </div>
                     <div style="flex-shrink: 0;">
-                        <button id="showMode" style="width:100px;">Показать в равных пропорциях</button>
+                        <button id="showMode" style="width:100px;">Изменить пропорции</button>
                     </div>
-
                 </div>
             </div>
-
-
 
         </div>
     </div>
