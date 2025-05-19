@@ -1,10 +1,12 @@
 using HTTP
 using JSON
 
-function send_optimization_data(ws, tab_id, method_name, iteration, best_fitness, best_solution, population)
+function send_optimization_data(ws, method_id, client_id, request_id, iteration, best_fitness, best_solution, population)
     data = Dict(
-        "tab_id" => tab_id,
-        "method" => method_name,
+        "action" => "iteration",
+        "client_id" => client_id,
+        "request_id" => request_id,
+        "method_id" => method_id,
         "iteration" => iteration,
         "population" => population,
         "best_fitness" => best_fitness,
@@ -12,7 +14,8 @@ function send_optimization_data(ws, tab_id, method_name, iteration, best_fitness
     )
     try
         HTTP.send(ws, JSON.json(data))
-    catch e 
-        println("Error sending message to client: ", e)
+        @debug "Sent iteration data" method_id=method_id iteration=iteration
+    catch e
+        @error "Error sending iteration data: $e" method_id=method_id
     end
 end   

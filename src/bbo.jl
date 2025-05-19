@@ -1,4 +1,5 @@
 module BBO
+export bbo
 
 using Random, Base.Threads
 
@@ -45,10 +46,7 @@ function sort_population(population, fitness)
     return population[indices], fitness[indices]
 end
 
-function bbo(ws, cancel_flags::Dict{String, Bool}, tab_id::String, lock, objective_function, dim, population_size, lower_bound, upper_bound, max_generations, mutation_probability, alpha=0, num_elites=2, duplicate_removal_interval=10)
-    #lock(lock) do
-    cancel_flags[tab_id] = false  # Сбрасываем флаг отмены
-    #end
+function bbo(ws, task_key::String, client_id, request_id, cancel_flags::Dict{String, Bool},  rlock, objective_function, dim, population_size, lower_bound, upper_bound, max_generations, mutation_probability, alpha=0, num_elites=2, duplicate_removal_interval=10)
     # Инициализация популяции
     population = initialize_population(dim, population_size, lower_bound, upper_bound)
     fitness = evaluate_population(population, objective_function)
@@ -56,10 +54,17 @@ function bbo(ws, cancel_flags::Dict{String, Bool}, tab_id::String, lock, objecti
     # Сортировка популяции по пригодности
     population, fitness = sort_population(population, fitness)
 
-    best_fitness = Float64[]
+    best_fitness = nothing
     best_solution = nothing
 
     for generation in 1:max_generations
+        #lock(rlock) do
+            if get(cancel_flags, task_key, false)
+                @info "BBO cancelled" client_id=client_id task_key=task_key
+                return best_solution, best_fitness
+            end
+        #end
+
         # Вероятности эмиграции и иммиграции
         mu = [(population_size + 1 - i) / (population_size + 1) for i in 1:population_size]
         lambda = [1 - m for m in mu]
@@ -98,35 +103,17 @@ function bbo(ws, cancel_flags::Dict{String, Bool}, tab_id::String, lock, objecti
             fitness[end - i + 1] = elite_fitness[i]
         end
 
-        # Удаление дубликатов через заданное количество итераций
-        #if generation % duplicate_removal_interval == 0
-        #    remove_duplicates!(population, fitness, lower_bound, upper_bound)
-        #end
-
         # Сортировка популяции по пригодности
         population, fitness = sort_population(population, fitness)
 
         # Сохранение лучшего решения
-        push!(best_fitness, fitness[1])
+        best_fitness = fitness[1]
         best_solution = population[1]
 
         # Отображение результатов по итерациям
         println("Поколение $generation: Лучшее значение = $(fitness[1])")
 
-        #lock(lock) do
-            if cancel_flags[tab_id]
-                println("Optimization in tab $tab_id cancelled.")
-                return 
-            end
-       # end
-
-        try
-            send_optimization_data(ws, tab_id, "bbo", generation, best_fitness[end], best_solution, population)
-            sleep(0.1)
-        catch e
-            println("failed send message to client")
-            return
-        end
+        send_optimization_data(ws, task_key, client_id, request_id, generation, best_fitness, best_solution, population)
     end
 
     return best_solution, best_fitness
