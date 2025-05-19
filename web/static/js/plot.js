@@ -84,9 +84,54 @@ import { evaluateFunction } from "./func.js";
 import * as THREE from "three";
 import { OrbitControls } from "OrbitControls";
 
-export { plotSurface, resetCamera, addPoints, addMinimum };
+export {
+    plotSurface,
+    resetCamera,
+    addPoints,
+    addMinimum,
+    initConvergencePlot,
+    updateConvergencePlot,
+};
 const sceneBackgroundColor = 0xe6e7ee;
 
+function initConvergencePlot() {
+    const layout = {
+        title: "График сходимости",
+        xaxis: { title: "Итерация", autorange: true },
+        yaxis: { title: "Лучшее значение", autorange: true },
+        margin: { t: 80, r: 20, b: 20, l: 80 },
+    };
+
+    const trace = {
+        x: [],
+        y: [],
+        mode: "lines+markers",
+        line: { color: "blue" },
+        name: "Лучшее значение",
+    };
+
+    Plotly.newPlot("convergencePlot", [trace], layout);
+}
+function updateConvergencePlot(iteration, bestFitness) {
+    Plotly.extendTraces(
+        "convergencePlot",
+        {
+            x: [[iteration]],
+            y: [[bestFitness]],
+        },
+        [0]
+    );
+
+    // По желанию ограничить количество точек, например, сбросить при слишком большом количестве
+    /* const maxPoints = 1000;
+    let currentLength =
+        document.getElementById("convergencePlot").data[0].x.length;
+    if (currentLength > maxPoints) {
+        Plotly.relayout("convergencePlot", {
+            "xaxis.range": [iteration - maxPoints, iteration],
+        });
+    }*/
+}
 function generateSurfaceData(func, xRange, yRange, resolution = 100) {
     const [xMin, xMax] = xRange;
     const [yMin, yMax] = yRange;
@@ -174,20 +219,8 @@ function resetCamera() {
     controls.target.set(0, 0, 0);
     controls.update();
 }
-
-let cachedFunction = null;
-let cachedBoundsX = null;
-let cachedBoundsY = null;
-let cachedGeometry = null;
-let cachedMaterial = null;
 function updateGraph(f, plotSettings, population, minimum) {
     removePreviousElements();
-    const boundsXStr = JSON.stringify(f.boundsX);
-    const boundsYStr = JSON.stringify(f.boundsY);
-    const isSameFunction =
-        cachedFunction === f.function &&
-        cachedBoundsX === boundsXStr &&
-        cachedBoundsY === boundsYStr;
 
     let { x, y, z } = generateSurfaceData(
         f.function,
@@ -196,100 +229,8 @@ function updateGraph(f, plotSettings, population, minimum) {
         plotSettings.resolution
     );
 
-    let geometry, vertices, colors;
-    if (isSameFunction && cachedGeometry && cachedMaterial) {
-        geometry = cachedGeometry;
-        vertices = geometry.attributes.position.array;
-        colors = geometry.attributes.color.array;
-    } else {
-        ({ geometry, vertices } = getSurfaceGeometry(f, { x, y, z }));
-        colors = getSurfaceColors({ x, y, z }, vertices);
-        geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
-        cachedGeometry = geometry;
-        cachedMaterial = new THREE.MeshLambertMaterial({
-            vertexColors: true,
-            side: THREE.DoubleSide,
-            opacity: 0.9,
-            transparent: true,
-        });
-        cachedFunction = f.function;
-        cachedBoundsX = boundsXStr;
-        cachedBoundsY = boundsYStr;
-    }
-
-    surface = new THREE.Mesh(geometry, cachedMaterial);
-    const { width, height, zMax, zMin, depth } = calculateRanges(
-        f.boundsX,
-        f.boundsY,
-        z
-    );
-
-    if (plotSettings.equalScale) {
-        applyEqualScale(f.boundsX, f.boundsY, zMax, zMin);
-    } else {
-        applyRealScale(
-            plotSettings,
-            100
-            //Math.floor(Math.max(width, height) / 2) * 2
-        );
-        let axeLength = Math.ceil(
-            Math.max(
-                Math.abs(f.boundsX[0]),
-                Math.abs(f.boundsX[1]),
-                Math.abs(f.boundsY[0]),
-                Math.abs(f.boundsY[1])
-            )
-        );
-        addGrid(scene, axeLength * 2);
-        const scale = Math.min(surface.scale.x, surface.scale.y);
-        grid.scale.set(surface.scale.x, 1, surface.scale.y);
-        //  grid.rotateX(-Math.PI / 2);
-        addAxes(
-            scene,
-            [-axeLength * surface.scale.x, axeLength * surface.scale.x],
-            // f.boundsX.map((v) => v * surface.scale.x),
-
-            [-axeLength * surface.scale.y, axeLength * surface.scale.y],
-            [Math.min(-5, Math.floor(zMin)), Math.max(5, Math.ceil(zMax))].map(
-                (v) => v * surface.scale.z
-            )
-            // f.boundsY.map((v) => v * surface.scale.y)
-        );
-        addAxisTicks(scene, "x", -axeLength, axeLength, surface.scale.x);
-        addAxisTicks(scene, "z", -axeLength, axeLength, surface.scale.y);
-        addAxisTicks(
-            scene,
-            "y",
-            Math.min(-5, Math.floor(zMin)),
-            Math.max(5, Math.ceil(zMax)),
-            surface.scale.z
-        );
-    }
-
-    scene.add(surface);
-    if (plotSettings.showGrid) {
-        addGridToSurface(x, y, z, scene);
-
-        surfaceGrid.scale.set(
-            surface.scale.x,
-            surface.scale.y,
-            surface.scale.z
-        );
-        surfaceGrid.rotateX(-Math.PI / 2);
-        //surfaceGrid.rotateZ(Math.PI);
-    }
-    addPoints(
-        f,
-        population,
-        minimum,
-        plotSettings.showPopulation,
-        plotSettings.pointSize
-    );
-
-    surface.rotateX(-Math.PI / 2);
-    /*
     let { geometry, vertices } = getSurfaceGeometry(f, { x, y, z });
-    let colors = getSurfaceColors({ x, y, z });
+    let colors = getSurfaceColors({ x, y, z }, vertices);
     surface = getSurface(geometry, colors);
 
     const { width, height, zMax, zMin, depth } = calculateRanges(
@@ -299,7 +240,7 @@ function updateGraph(f, plotSettings, population, minimum) {
     );
 
     if (plotSettings.equalScale) {
-        applyEqualScale(f.boundsX, f.boundsY, zMax, zMin);
+        applyEqualScale(width, height, depth, f.boundsX, f.boundsY, zMax, zMin);
     } else {
         applyRealScale(
             plotSettings,
@@ -359,8 +300,10 @@ function updateGraph(f, plotSettings, population, minimum) {
         plotSettings.showPopulation,
         plotSettings.pointSize
     );
-
-    surface.rotateX(-Math.PI / 2);*/
+    /*if (minimum) {
+        addMinimum(f, minimum, plotSettings.pointSize);
+    }*/
+    surface.rotateX(-Math.PI / 2);
     //surface.rotateZ(Math.PI);
 }
 
@@ -601,13 +544,21 @@ function addPoints(
     f,
     population,
     minimum,
-    showPopulation,
+    showMinimum,
     radius = 0.08,
+    surfacePlot = true,
+    iteration = 1,
+    best_fitness = 0,
     color = 0xff0000
 ) {
+    if (!surfacePlot) {
+        updateConvergencePlot(iteration, best_fitness);
+        return; // Чтобы не выполнять код для 3D
+    }
+
     scene.remove(minPoint);
     scene.remove(pointCloud);
-    if (population.length > 0 && showPopulation) {
+    if (population.length > 0 && showMinimum) {
         pointCloud = new THREE.Group(); // Группа для всех точек (сфер)
 
         const sphereGeometry = new THREE.SphereGeometry(radius, 10, 10);
@@ -638,7 +589,6 @@ function addPoints(
     if (minimum) {
         addMinimum(f, minimum, radius);
     }
-    //if (population.length > 0) addMinimum(f, population[0], radius);
 }
 
 function addMinimum(f, p, radius = 0.08) {
