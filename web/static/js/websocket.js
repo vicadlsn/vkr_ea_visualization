@@ -1,5 +1,5 @@
 export { connectWebsocket };
-import { addPoints } from "./plot.js";
+import { addPoints, initConvergencePlot } from "./plot.js";
 import { updateMethodInfo, state } from "./ui.js";
 
 const RECONNECT_INTERVALS = [1000, 2000, 4000];
@@ -32,15 +32,17 @@ function connectWebsocket() {
 
             const method_id = data.method_id;
 
-            /*if (data.action === "start_ack") {
-                if (state.activeRequests[method_id] === data.request_id) {
-                }
-            } else */
-            if (
+            if (data.action === "start_ack") {
+                console.log("Received message:", data);
+                initConvergencePlot();
+                /*if (state.activeRequests[method_id] === data.request_id) {
+                }*/
+            } else if (
                 data.action === "stop_ack" ||
                 data.action === "complete" ||
                 data.action === "error"
             ) {
+                console.log("Received message:", data);
                 if (state.activeRequests[method_id] === data.request_id) {
                     delete state.activeRequests[method_id];
                 }
@@ -50,15 +52,20 @@ function connectWebsocket() {
                 state.tabsData[method_id].best_solution = data["best_solution"];
                 state.tabsData[method_id].best_fitness = data["best_fitness"];
                 state.tabsData[method_id].iteration = data["iteration"];
-
+                /*state.tabsData[method_id].trajectory.push(
+                    data["best_solution"]
+                );*/
                 if (method_id === state.currentTab) {
                     updateMethodInfo();
                     addPoints(
                         state.currentFunction,
                         state.tabsData[method_id].population,
                         state.tabsData[method_id].best_solution,
-                        state.plotSettings.showPopulation,
-                        state.plotSettings.pointSize
+                        state.plotSettings.showMinimum,
+                        state.plotSettings.pointSize,
+                        state.plotSettings.plotStyle,
+                        state.tabsData[method_id].iteration,
+                        state.tabsData[method_id].best_fitness
                     );
                 }
             }
