@@ -21,7 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
 */
         const request_id = uuidv4();
         state.activeRequests[method_id] = request_id;
-
+        state.tabsData[method_id].trajectory = [];
+        state.tabsData[method_id].total_iterations = state.iterationsCount;
         const params = {
             action: "start",
             request_id: request_id,

@@ -4,11 +4,18 @@ import {
     builtinFunctions,
 } from "./func.js";
 
-import { plotSurface, resetCamera, addPoints, addMinimum } from "./plot.js";
-
+import {
+    plotSurface,
+    resetCamera,
+    addPoints,
+    addMinimum,
+    initConvergencePlot,
+    updateConvergencePlot,
+} from "./plot.js";
 export { updatePlot, updateMethodInfo };
 
 export let state = {
+    activeRequests: {}, // { method_id: request_id }
     currentFunction: {
         function: getFunctionData("cos(x^2+y^2)"),
         boundsX: [-5, 5],
@@ -16,7 +23,8 @@ export let state = {
     },
     plotSettings: {
         resolution: 50,
-        showPopulation: true,
+        plotStyle: true,
+        showMinimum: true,
         showGrid: false,
         equalScale: false,
         pointSize: 0.08,
@@ -35,6 +43,7 @@ export let state = {
             best_solution: undefined,
             best_fitness: undefined,
             iteration: 0,
+            total_iterations: 0,
         },
         cultural: {
             params: {},
@@ -42,15 +51,25 @@ export let state = {
             best_solution: undefined,
             best_fitness: undefined,
             iteration: 0,
+            total_iterations: 0,
         },
     },
     currentTab: "bbo",
 };
 
+const info = document.getElementById("methodInfoContent");
+
+function restoreStateFunctionChange() {
+    getCurrentTabData().population = [];
+    getCurrentTabData().trajectory = [];
+    getCurrentTabData().best_solution = undefined;
+    getCurrentTabData().best_fitness = undefined;
+    getCurrentTabData().iteration = 0;
+    getCurrentTabData().total_iterations = 0;
+}
+
 function updateMethodInfo() {
     const currentTab = getCurrentTabData();
-    const info = document.getElementById("methodInfoContent");
-
     info.innerHTML = `
         <strong>Метод:</strong> ${state.currentTab}<br>
         <strong>Текущее решение:</strong> ${
@@ -66,9 +85,18 @@ function updateMethodInfo() {
             currentTab.best_fitness ? currentTab.best_fitness.toFixed(4) : ""
         }<br>
         <strong>Итерация:</strong> ${
-            currentTab.iteration ? currentTab.iteration : ""
+            currentTab.iteration
+                ? currentTab.iteration + "/" + currentTab.total_iterations
+                : ""
         }<br>
     `;
+
+    /*
+    <strong>Функция:</strong> ${
+           state.currentFunction.function
+               ? state.currentFunction.function.original
+               : ""
+       }<br>*/
 }
 
 function getCurrentTabData() {
@@ -77,13 +105,16 @@ function getCurrentTabData() {
 
 function updatePlot() {
     const tabData = getCurrentTabData();
-    console.log(tabData);
-    plotSurface(
-        state.currentFunction,
-        state.plotSettings,
-        tabData.population,
-        tabData.best_solution
-    );
+    if (state.plotSettings.plotStyle) {
+        plotSurface(
+            state.currentFunction,
+            state.plotSettings,
+            tabData.population,
+            tabData.best_solution
+        );
+    } else {
+        initConvergencePlot();
+    }
 }
 
 function setInput(inputElement, valid) {
@@ -104,8 +135,8 @@ function handleFunctionChange(inputElement, selectElement, functionError) {
         setInput(inputElement, true);
 
         state.currentFunction.function = data;
-        getCurrentTabData().population = [];
-        getCurrentTabData().best_solution = undefined;
+        restoreStateFunctionChange();
+        updateMethodInfo();
         updatePlot();
     } else {
         setInput(inputElement, false);
@@ -146,9 +177,7 @@ function setupTabs() {
         }
 
         state.currentTab = tab_name;
-
         updateMethodInfo();
-
         updatePlot();
     }
 
@@ -191,8 +220,15 @@ function setupEventListeners() {
         state.currentFunction.boundsX = [...builtin.boundsX];
         state.currentFunction.boundsY = [...builtin.boundsY];
 
-        getCurrentTabData().population = [];
-        getCurrentTabData().best_solution = undefined;
+        state.plotSettings.aspectratioX = builtin.zoom[0];
+        state.plotSettings.aspectratioY = builtin.zoom[1];
+        state.plotSettings.aspectratioZ = builtin.zoom[2];
+        aspectratioX.value = state.plotSettings.aspectratioX;
+        aspectratioY.value = state.plotSettings.aspectratioY;
+        aspectratioZ.value = state.plotSettings.aspectratioZ;
+
+        restoreStateFunctionChange();
+        updateMethodInfo();
         updatePlot();
     });
 
@@ -318,27 +354,69 @@ function initTestFunctionOptions() {
     }
 }
 
+function switchPlots() {
+    if (state.plotSettings.plotStyle) {
+        document.getElementById("graph3d").style.display = "block";
+        document.getElementById("convergencePlot").style.display = "none";
+    } else {
+        document.getElementById("graph3d").style.display = "none";
+        document.getElementById("convergencePlot").style.display = "block";
+    }
+    updatePlot();
+}
+
 function setupUI() {
     initTestFunctionOptions();
 
-    const showPopulation = document.getElementById("showPopulation");
-    showPopulation.textContent = state.plotSettings.showPopulation
-        ? "Вся популяция"
-        : "Только минимум";
+    const plotStyle = document.getElementById("plotStyle");
+    plotStyle.textContent = state.plotSettings.plotStyle
+        ? "График сходимости"
+        : "График поверхности";
 
-    showPopulation.addEventListener("click", () => {
-        state.plotSettings.showPopulation = !state.plotSettings.showPopulation;
-        showPopulation.textContent = state.plotSettings.showPopulation
-            ? "Вся популяция"
-            : "Только минимум";
+    plotStyle.addEventListener("click", () => {
+        state.plotSettings.plotStyle = !state.plotSettings.plotStyle;
+        plotStyle.textContent = state.plotSettings.plotStyle
+            ? "График сходимости"
+            : "График поверхности";
+        switchPlots();
         //updatePlot();
         let tab = getCurrentTabData();
         addPoints(
             state.currentFunction,
             tab.population,
             tab.best_solution,
-            state.plotSettings.showPopulation,
-            state.plotSettings.pointSize
+            state.plotSettings.plotStyle,
+            state.plotSettings.showMinimum,
+            state.plotSettings.pointSize,
+
+            state.plotSettings.plotStyle,
+            tab.iteration,
+            tab.best_fitness
+        );
+    });
+
+    const showMinimum = document.getElementById("showMinimum");
+    showMinimum.textContent = state.plotSettings.showMinimum
+        ? "Показать минимум"
+        : "Показать популяцию";
+
+    showMinimum.addEventListener("click", () => {
+        state.plotSettings.showMinimum = !state.plotSettings.showMinimum;
+        showMinimum.textContent = state.plotSettings.showMinimum
+            ? "Показать минимум"
+            : "Показать популяцию";
+        //updatePlot();
+        let tab = getCurrentTabData();
+        addPoints(
+            state.currentFunction,
+            tab.population,
+            tab.best_solution,
+            state.plotSettings.showMinimum,
+            state.plotSettings.pointSize,
+
+            state.plotSettings.plotStyle,
+            tab.iteration,
+            tab.best_fitness
         );
     });
 
@@ -348,7 +426,7 @@ function setupUI() {
         showGrid.textContent = state.plotSettings.showGrid
             ? "Скрыть сетку"
             : "Показать сетку";
-        updatePlot();
+        if (state.plotSettings.plotStyle) updatePlot();
     });
 
     const dropCamera = document.getElementById("dropCamera");
@@ -357,9 +435,9 @@ function setupUI() {
     const showMode = document.getElementById("showMode");
     showMode.addEventListener("click", () => {
         state.plotSettings.equalScale = !state.plotSettings.equalScale;
-        showMode.textContent = state.plotSettings.equalScale
+        /*showMode.textContent = state.plotSettings.equalScale
             ? "Показать в реальных пропорциях"
-            : "Показать в равных пропорциях";
+            : "Показать в равных пропорциях";*/
         updatePlot();
     });
 }
@@ -372,5 +450,6 @@ export function initUI() {
     setupTabs();
 
     setupUI();
+    updateMethodInfo();
     updatePlot();
 }
