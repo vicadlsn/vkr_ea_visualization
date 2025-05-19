@@ -8,8 +8,8 @@ $accent-color-dark: darken($accent-color, 12%);
 
 $box-shadow-light: 2px 2px 5px #babecc, -5px -5px 10px #ffffff73;
 $box-shadow-light-tab-buttons-inner: 2px 2px 5px #babecc;
-$box-shadow-inset-active: inset 2px 2px 5px darken($accent-color, 12%),
-    inset -5px -5px 10px $accent-color-dark;
+$box-shadow-inset-active: inset 2px 2px 5px darken($accent-color, 18%),
+    inset -5px -5px 10px darken($accent-color, 8%);
 $border-radius-standard: 12px;
 
 /* Стили для полос прокрутки */
@@ -108,9 +108,7 @@ select {
 
     box-sizing: border-box;
     color: $text-color-grey;
-    padding: 10px 20px;
-    /*padding: 0px 20px 10px 20px;
-    */
+    padding: 0px 20px 10px 20px;
 }
 
 .controls-container button {
@@ -313,24 +311,17 @@ button {
         border-bottom-right-radius: $border-radius-standard;
         border-bottom: none;
     }
-
-    &.active-button,
-    &:active {
-        background-color: $accent-color;
-        color: #fff;
-        box-shadow: $box-shadow-inset-active;
-    }
 }
 
-button:active {
+button:active,
+.tabButton:first-child:active {
     color: #3498db;
     box-shadow: inset 2px 2px 5px #babecc, inset -5px -5px 10px #ffffff73;
 }
 
 .active-button,
-.tabButton:active,
-.tabButton:first-child.active-button,
-.tabButton:first-child:active {
+.tabButton.active-button,
+.tabButton:first-child.active-button {
     background-color: $accent-color;
     color: #fff;
     box-shadow: $box-shadow-inset-active;

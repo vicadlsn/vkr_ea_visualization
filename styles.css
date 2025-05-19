@@ -95,7 +95,9 @@ select {
   gap: 15px;
   box-sizing: border-box;
   color: #595959;
-  padding: 0px 20px 10px 20px;
+  padding: 10px 20px;
+  /*padding: 0px 20px 10px 20px;
+  */
 }
 
 .controls-container button {
@@ -291,19 +293,24 @@ button {
   border-bottom-right-radius: 12px;
   border-bottom: none;
 }
+.tabButton.active-button, .tabButton:active {
+  background-color: #2d4cc8;
+  color: #fff;
+  box-shadow: inset 2px 2px 5px rgb(33.7591836735, 57.0155102041, 150.0408163265), inset -5px -5px 10px rgb(33.7591836735, 57.0155102041, 150.0408163265);
+}
 
-button:active,
-.tabButton:first-child:active {
+button:active {
   color: #3498db;
   box-shadow: inset 2px 2px 5px #babecc, inset -5px -5px 10px rgba(255, 255, 255, 0.4509803922);
 }
 
 .active-button,
-.tabButton.active-button,
-.tabButton:first-child.active-button {
+.tabButton:active,
+.tabButton:first-child.active-button,
+.tabButton:first-child:active {
   background-color: #2d4cc8;
   color: #fff;
-  box-shadow: inset 2px 2px 5px rgb(28.1387755102, 47.5232653061, 125.0612244898), inset -5px -5px 10px rgb(37.506122449, 63.3436734694, 166.693877551);
+  box-shadow: inset 2px 2px 5px rgb(33.7591836735, 57.0155102041, 150.0408163265), inset -5px -5px 10px rgb(33.7591836735, 57.0155102041, 150.0408163265);
 }
 
 *,
