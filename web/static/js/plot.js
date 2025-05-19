@@ -175,8 +175,19 @@ function resetCamera() {
     controls.update();
 }
 
+let cachedFunction = null;
+let cachedBoundsX = null;
+let cachedBoundsY = null;
+let cachedGeometry = null;
+let cachedMaterial = null;
 function updateGraph(f, plotSettings, population, minimum) {
     removePreviousElements();
+    const boundsXStr = JSON.stringify(f.boundsX);
+    const boundsYStr = JSON.stringify(f.boundsY);
+    const isSameFunction =
+        cachedFunction === f.function &&
+        cachedBoundsX === boundsXStr &&
+        cachedBoundsY === boundsYStr;
 
     let { x, y, z } = generateSurfaceData(
         f.function,
@@ -185,6 +196,98 @@ function updateGraph(f, plotSettings, population, minimum) {
         plotSettings.resolution
     );
 
+    let geometry, vertices, colors;
+    if (isSameFunction && cachedGeometry && cachedMaterial) {
+        geometry = cachedGeometry;
+        vertices = geometry.attributes.position.array;
+        colors = geometry.attributes.color.array;
+    } else {
+        ({ geometry, vertices } = getSurfaceGeometry(f, { x, y, z }));
+        colors = getSurfaceColors({ x, y, z }, vertices);
+        geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+        cachedGeometry = geometry;
+        cachedMaterial = new THREE.MeshLambertMaterial({
+            vertexColors: true,
+            side: THREE.DoubleSide,
+            opacity: 0.9,
+            transparent: true,
+        });
+        cachedFunction = f.function;
+        cachedBoundsX = boundsXStr;
+        cachedBoundsY = boundsYStr;
+    }
+
+    surface = new THREE.Mesh(geometry, cachedMaterial);
+    const { width, height, zMax, zMin, depth } = calculateRanges(
+        f.boundsX,
+        f.boundsY,
+        z
+    );
+
+    if (plotSettings.equalScale) {
+        applyEqualScale(f.boundsX, f.boundsY, zMax, zMin);
+    } else {
+        applyRealScale(
+            plotSettings,
+            100
+            //Math.floor(Math.max(width, height) / 2) * 2
+        );
+        let axeLength = Math.ceil(
+            Math.max(
+                Math.abs(f.boundsX[0]),
+                Math.abs(f.boundsX[1]),
+                Math.abs(f.boundsY[0]),
+                Math.abs(f.boundsY[1])
+            )
+        );
+        addGrid(scene, axeLength * 2);
+        const scale = Math.min(surface.scale.x, surface.scale.y);
+        grid.scale.set(surface.scale.x, 1, surface.scale.y);
+        //  grid.rotateX(-Math.PI / 2);
+        addAxes(
+            scene,
+            [-axeLength * surface.scale.x, axeLength * surface.scale.x],
+            // f.boundsX.map((v) => v * surface.scale.x),
+
+            [-axeLength * surface.scale.y, axeLength * surface.scale.y],
+            [Math.min(-5, Math.floor(zMin)), Math.max(5, Math.ceil(zMax))].map(
+                (v) => v * surface.scale.z
+            )
+            // f.boundsY.map((v) => v * surface.scale.y)
+        );
+        addAxisTicks(scene, "x", -axeLength, axeLength, surface.scale.x);
+        addAxisTicks(scene, "z", -axeLength, axeLength, surface.scale.y);
+        addAxisTicks(
+            scene,
+            "y",
+            Math.min(-5, Math.floor(zMin)),
+            Math.max(5, Math.ceil(zMax)),
+            surface.scale.z
+        );
+    }
+
+    scene.add(surface);
+    if (plotSettings.showGrid) {
+        addGridToSurface(x, y, z, scene);
+
+        surfaceGrid.scale.set(
+            surface.scale.x,
+            surface.scale.y,
+            surface.scale.z
+        );
+        surfaceGrid.rotateX(-Math.PI / 2);
+        //surfaceGrid.rotateZ(Math.PI);
+    }
+    addPoints(
+        f,
+        population,
+        minimum,
+        plotSettings.showPopulation,
+        plotSettings.pointSize
+    );
+
+    surface.rotateX(-Math.PI / 2);
+    /*
     let { geometry, vertices } = getSurfaceGeometry(f, { x, y, z });
     let colors = getSurfaceColors({ x, y, z });
     surface = getSurface(geometry, colors);
@@ -256,10 +359,8 @@ function updateGraph(f, plotSettings, population, minimum) {
         plotSettings.showPopulation,
         plotSettings.pointSize
     );
-    /*if (minimum) {
-        addMinimum(f, minimum, plotSettings.pointSize);
-    }*/
-    surface.rotateX(-Math.PI / 2);
+
+    surface.rotateX(-Math.PI / 2);*/
     //surface.rotateZ(Math.PI);
 }
 
@@ -290,8 +391,12 @@ function disposeObject(obj) {
     if (obj.geometry) obj.geometry.dispose();
     if (obj.material) {
         if (Array.isArray(obj.material)) {
-            obj.material.forEach((mat) => mat.dispose());
+            obj.material.forEach((mat) => {
+                if (mat.map) mat.map.dispose();
+                mat.dispose();
+            });
         } else {
+            if (obj.material.map) obj.material.map.dispose();
             obj.material.dispose();
         }
     }

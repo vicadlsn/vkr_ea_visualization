@@ -1,15 +1,31 @@
 import { initUI, state } from "./ui.js";
-import { addWebsocket, sendMessage } from "./websocket.js";
+import { connectWebsocket } from "./websocket.js";
+import { v4 as uuidv4 } from "https://esm.sh/uuid@9.0.1";
 
 document.addEventListener("DOMContentLoaded", () => {
     initUI();
 
-    let socket = addWebsocket();
+    state.activeRequests = {};
+
+    const sendMessage = connectWebsocket();
     const startButton = document.getElementById("startOptimization");
+    const stopButton = document.getElementById("stopOptimization");
+    const appState = document.getElementById("appState");
+
     startButton.addEventListener("click", () => {
+        const method_id = state.currentTab;
+        /* if (state.activeRequests[method_id]) {
+            errorDiv.textContent = `Optimization already running for ${method_id}`;
+            return;
+        }
+*/
+        const request_id = uuidv4();
+        state.activeRequests[method_id] = request_id;
+
         const params = {
             action: "start",
-            tab_id: state.currentTab,
+            request_id: request_id,
+            method_id: method_id,
             function: state.currentFunction.function.original,
             lower_bounds: [
                 state.currentFunction.boundsX[0],
@@ -26,12 +42,19 @@ document.addEventListener("DOMContentLoaded", () => {
             population_size: state.populationSize,
             params: state.tabsData[state.currentTab].params,
         };
-        console.log(params);
-        sendMessage(socket, params);
+        sendMessage(params);
     });
 
-    const stopOptimization = document.getElementById("stopOptimization");
-    stopOptimization.addEventListener("click", () => {
-        sendMessage(socket, { action: "stop", tab_id: state.currentTab });
+    stopButton.addEventListener("click", () => {
+        const method_id = state.currentTab;
+        const request_id = state.activeRequests[method_id];
+
+        sendMessage({
+            action: "stop",
+            request_id: request_id,
+            method_id: method_id,
+        });
     });
+
+    appState.textContent = `Приложение готово к работе`;
 });
