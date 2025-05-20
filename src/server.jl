@@ -17,9 +17,9 @@ function setup_logger()
         @error "Failed to create log directory: $e"
         throw(e)
     end
-    timestamp = Dates.format(now(), "yyyy-mm-dd_HH-MM-SS")
-    log_file = joinpath(log_dir, "server_$timestamp.log")
-
+    #timestamp = Dates.format(now(), "yyyy-mm-dd_HH-MM-SS")
+    #log_file = joinpath(log_dir, "server_$timestamp.log")
+    log_file = joinpath(log_dir, "server.log")
     logger = FileLogger(
         log_file
     )

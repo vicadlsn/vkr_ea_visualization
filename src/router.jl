@@ -5,8 +5,10 @@ using WebSockets
 
 export create_router 
 
+const base = "web/dist/"
+
 function index_handler(req::HTTP.Request)
-    filepath = "web/templates/index.html"
+    filepath = base * "index.html"
     html = read(filepath)
     if isfile(filepath)
         return HTTP.Response(200, ["Content-Type" => "text/html"], html)
@@ -17,7 +19,7 @@ end
 
 function static_handler(req::HTTP.Request)
     path = String(req.target)
-    filepath = "web" * path
+    filepath = base * path
     if isfile(filepath)
         content = read(filepath)
         mime = get_mime(filepath)
@@ -45,8 +47,9 @@ function create_router()
     router = HTTP.Router()
     
     HTTP.register!(router, "GET", "/", index_handler)
-    HTTP.register!(router, "GET", "/static/**", static_handler)
-
+    HTTP.register!(router, "GET", "/assets/**", static_handler)
+   # HTTP.register!(router, "GET", "/modules/**", static_handler)
+    #HTTP.register!(router, "GET", "/static/**", static_handler)
     return router
 end
 

@@ -32,10 +32,14 @@ function handle_ws_client(http::HTTP.Stream)
             handle_ws_messages(ws, client_id, optimizations, cancel_flags, rlock)
         end
     catch e
-        @error "Websocket error: $e" client_id=client_id
+        if isa(e, InterruptException)
+            @warn "WebSocket interrupted: InterruptException" client_id=client_id
+        else
+            @error "Websocket error: $e" client_id=client_id
+        end
     finally
         cleanup_tasks(optimizations, cancel_flags, rlock)
-        @info "Websocker closed" client_id=client_id
+        @info "Websocket closed" client_id=client_id
     end
 end
 
@@ -93,7 +97,6 @@ function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimizations
             end
 
             f_wrapped = v -> f(v[1], v[2])
-
             params = data["params"]
             params["population_size"] = data["population_size"]
             params["lower_bounds"] = data["lower_bounds"]
@@ -188,6 +191,7 @@ function optimize(ws::HTTP.WebSocket, f_wrapped, method_id::String, client_id::S
             send_error(ws, client_id, request_id, "Unknown method")
             return
         end
+        @info "Optimization completed" client_id=client_id request_id=request_id method_id=method_id best_solution=string(best_solution) best_fitness=best_fitness
         # Отправка финального результата
         #lock(rlock) do
             if !haskey(cancel_flags, method_id) || !cancel_flags[method_id]
