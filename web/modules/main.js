@@ -7,8 +7,12 @@ document.addEventListener("DOMContentLoaded", () => {
     initUI();
 
     state.activeRequests = {};
+    document.getElementById(
+        "appState"
+    ).textContent = `Нет соединения с Websocket сервером...`;
 
-    const sendMessage = connectWebsocket();
+    let socket,
+        sendMessage = connectWebsocket();
     const startButton = document.getElementById("startOptimization");
     const stopButton = document.getElementById("stopOptimization");
     const appState = document.getElementById("appState");
@@ -20,9 +24,10 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 */
+
         const request_id = uuidv4();
         state.activeRequests[method_id] = request_id;
-        state.tabsData[method_id].trajectory = [];
+        state.tabsData[method_id].history = [];
         state.tabsData[method_id].total_iterations = state.iterationsCount;
         const params = {
             action: "start",
@@ -44,6 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
             population_size: state.populationSize,
             params: state.tabsData[state.currentTab].params,
         };
+        console.log(state.tabsData[method_id].params);
         sendMessage(params);
     });
 
@@ -57,6 +63,4 @@ document.addEventListener("DOMContentLoaded", () => {
             method_id: method_id,
         });
     });
-
-    appState.textContent = `Приложение готово к работе`;
 });

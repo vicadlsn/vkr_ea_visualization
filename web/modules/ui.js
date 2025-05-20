@@ -1,3 +1,5 @@
+import { state } from "./state.js";
+
 import {
     getFunctionData,
     getFunctionLabels,
@@ -15,54 +17,11 @@ import {
 
 export { updatePlot, updateMethodInfo };
 
-export let state = {
-    activeRequests: {}, // { method_id: request_id }
-    currentFunction: {
-        function: getFunctionData("cos(x^2+y^2)"),
-        boundsX: [-5, 5],
-        boundsY: [-5, 5],
-    },
-    plotSettings: {
-        resolution: 50,
-        plotStyle: true,
-        showMinimum: true,
-        showGrid: false,
-        equalScale: false,
-        pointSize: 0.08,
-        aspectratioX: 1,
-        aspectratioY: 1,
-        aspectratioZ: 1,
-    },
-
-    populationSize: 50,
-    iterationsCount: 10,
-
-    tabsData: {
-        bbo: {
-            params: {},
-            population: [],
-            best_solution: undefined,
-            best_fitness: undefined,
-            iteration: 0,
-            total_iterations: 0,
-        },
-        cultural: {
-            params: {},
-            population: [],
-            best_solution: undefined,
-            best_fitness: undefined,
-            iteration: 0,
-            total_iterations: 0,
-        },
-    },
-    currentTab: "bbo",
-};
-
 const info = document.getElementById("methodInfoContent");
 
 function restoreStateFunctionChange() {
     getCurrentTabData().population = [];
-    getCurrentTabData().trajectory = [];
+    getCurrentTabData().history = [];
     getCurrentTabData().best_solution = undefined;
     getCurrentTabData().best_fitness = undefined;
     getCurrentTabData().iteration = 0;
@@ -78,7 +37,7 @@ function updateMethodInfo() {
                 ? "(" +
                   currentTab.best_solution[0].toFixed(4) +
                   "," +
-                  currentTab.best_solution[0].toFixed(4) +
+                  currentTab.best_solution[1].toFixed(4) +
                   ")"
                 : ""
         }<br>
@@ -91,13 +50,6 @@ function updateMethodInfo() {
                 : ""
         }<br>
     `;
-
-    /*
-    <strong>Функция:</strong> ${
-           state.currentFunction.function
-               ? state.currentFunction.function.original
-               : ""
-       }<br>*/
 }
 
 function getCurrentTabData() {
@@ -106,7 +58,7 @@ function getCurrentTabData() {
 
 function updatePlot() {
     const tabData = getCurrentTabData();
-    if (state.plotSettings.plotStyle) {
+    if (state.plotSettings.showSurface) {
         plotSurface(
             state.currentFunction,
             state.plotSettings,
@@ -114,7 +66,7 @@ function updatePlot() {
             tabData.best_solution
         );
     } else {
-        initConvergencePlot();
+        updateConvergencePlot("convergencePlot", tabData.history);
     }
 }
 
@@ -356,54 +308,50 @@ function initTestFunctionOptions() {
 }
 
 function switchPlots() {
-    if (state.plotSettings.plotStyle) {
-        document.getElementById("graph3d").style.display = "block";
+    if (state.plotSettings.showSurface) {
+        document.getElementById("graph3d").style.visibility = "block";
         document.getElementById("convergencePlot").style.display = "none";
+        plotSurface(
+            state.currentFunction,
+            state.plotSettings,
+            tabData.population,
+            tabData.best_solution
+        );
     } else {
         document.getElementById("graph3d").style.display = "none";
         document.getElementById("convergencePlot").style.display = "block";
+        initConvergencePlot("convergencePlot");
+        updateConvergencePlot("convergencePlot", getCurrentTabData().history);
+        //Plotly.Plots.resize(document.getElementById("convergencePlot"));
     }
-    updatePlot();
+
+    //updatePlot();
 }
 
 function setupUI() {
     initTestFunctionOptions();
 
-    const plotStyle = document.getElementById("plotStyle");
-    plotStyle.textContent = state.plotSettings.plotStyle
+    const showSurface = document.getElementById("showSurface");
+    showSurface.textContent = state.plotSettings.showSurface
         ? "График сходимости"
         : "График поверхности";
 
-    plotStyle.addEventListener("click", () => {
-        state.plotSettings.plotStyle = !state.plotSettings.plotStyle;
-        plotStyle.textContent = state.plotSettings.plotStyle
+    showSurface.addEventListener("click", () => {
+        state.plotSettings.showSurface = !state.plotSettings.showSurface;
+        showSurface.textContent = state.plotSettings.showSurface
             ? "График сходимости"
             : "График поверхности";
         switchPlots();
-        //updatePlot();
-        let tab = getCurrentTabData();
-        addPoints(
-            state.currentFunction,
-            tab.population,
-            tab.best_solution,
-            state.plotSettings.plotStyle,
-            state.plotSettings.showMinimum,
-            state.plotSettings.pointSize,
-
-            state.plotSettings.plotStyle,
-            tab.iteration,
-            tab.best_fitness
-        );
     });
 
-    const showMinimum = document.getElementById("showMinimum");
-    showMinimum.textContent = state.plotSettings.showMinimum
+    const showPopulation = document.getElementById("showPopulation");
+    showPopulation.textContent = state.plotSettings.showPopulation
         ? "Показать минимум"
         : "Показать популяцию";
 
-    showMinimum.addEventListener("click", () => {
-        state.plotSettings.showMinimum = !state.plotSettings.showMinimum;
-        showMinimum.textContent = state.plotSettings.showMinimum
+    showPopulation.addEventListener("click", () => {
+        state.plotSettings.showPopulation = !state.plotSettings.showPopulation;
+        showPopulation.textContent = state.plotSettings.showPopulation
             ? "Показать минимум"
             : "Показать популяцию";
         //updatePlot();
@@ -412,12 +360,8 @@ function setupUI() {
             state.currentFunction,
             tab.population,
             tab.best_solution,
-            state.plotSettings.showMinimum,
-            state.plotSettings.pointSize,
-
-            state.plotSettings.plotStyle,
-            tab.iteration,
-            tab.best_fitness
+            state.plotSettings.showPopulation,
+            state.plotSettings.pointSize
         );
     });
 
@@ -427,7 +371,7 @@ function setupUI() {
         showGrid.textContent = state.plotSettings.showGrid
             ? "Скрыть сетку"
             : "Показать сетку";
-        if (state.plotSettings.plotStyle) updatePlot();
+        updatePlot();
     });
 
     const dropCamera = document.getElementById("dropCamera");
@@ -436,9 +380,6 @@ function setupUI() {
     const showMode = document.getElementById("showMode");
     showMode.addEventListener("click", () => {
         state.plotSettings.equalScale = !state.plotSettings.equalScale;
-        /*showMode.textContent = state.plotSettings.equalScale
-            ? "Показать в реальных пропорциях"
-            : "Показать в равных пропорциях";*/
         updatePlot();
     });
 }
@@ -452,5 +393,6 @@ export function initUI() {
 
     setupUI();
     updateMethodInfo();
+    // initConvergencePlot("convergencePlot");
     updatePlot();
 }

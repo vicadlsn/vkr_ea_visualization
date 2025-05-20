@@ -1,87 +1,5 @@
-/*import { evaluateFunction } from "./func.js";
-
-function generateSurfaceData(func, xRange, yRange, resolution = 50) {
-    let x = math
-        .range(xRange[0], xRange[1], (xRange[1] - xRange[0]) / (resolution - 1))
-        .toArray();
-    let y = math
-        .range(yRange[0], yRange[1], (yRange[1] - yRange[0]) / (resolution - 1))
-        .toArray();
-    let z = [];
-    for (let i = 0; i < y.length; i++) {
-        let row = [];
-        for (let j = 0; j < x.length; j++) {
-            row.push(evaluateFunction(func, { x: x[j], y: y[i] }));
-        }
-        z.push(row);
-    }
-    return { x, y, z };
-}
-
-export function plotSurface(f, plotSettings, population = []) {
-    let graphElement = document.getElementById("graph3d");
-
-    // Генерируем поверхность функции
-    let { x, y, z } = generateSurfaceData(
-        f.function,
-        f.boundsX,
-        f.boundsY,
-        plotSettings.resolution
-    );
-
-    const surfaceTrace = {
-        type: "surface",
-        x: x,
-        y: y,
-        z: z,
-        colorscale: "Bluered",
-        opacity: 0.8,
-    };
-
-    let px = population.map((p) => p[0]);
-    let py = population.map((p) => p[1]);
-    let pz = population.map((p) =>
-        evaluateFunction(f.function, { x: p[0], y: p[1] })
-    );
-
-    const scatterTrace = {
-        type: "scatter3d",
-        mode: "markers",
-        x: px,
-        y: py,
-        z: pz,
-        marker: {
-            size: 6,
-            color: "red",
-            opacity: 1,
-        },
-    };
-
-    // Создаём layout один раз
-    let layout = {
-        scene: {
-            xaxis: { title: "X" },
-            yaxis: { title: "Y" },
-            zaxis: { title: "f(x, y)" },
-            aspectratio: {
-                x: plotSettings.aspectratioX,
-                y: plotSettings.aspectratioY,
-                z: plotSettings.aspectratioZ,
-            },
-        },
-        paper_bgcolor: "rgba(255,255,255,0)",
-    };
-
-    // Обновляем график без сброса управления
-    if (graphElement.data) {
-        Plotly.react("graph3d", [surfaceTrace, scatterTrace], layout);
-    } else {
-        Plotly.newPlot("graph3d", [surfaceTrace, scatterTrace], layout);
-    }
-}*/
-
 import { evaluateFunction } from "./func.js";
-import Plotly from "plotly.js-dist";
+import Plotly from "plotly.js-dist-min";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 export {
@@ -91,15 +9,16 @@ export {
     addMinimum,
     initConvergencePlot,
     updateConvergencePlot,
+    extendConvergencePlot,
 };
 const sceneBackgroundColor = 0xe6e7ee;
 
-function initConvergencePlot() {
+function initConvergencePlot(graphDiv) {
     const layout = {
         title: "График сходимости",
         xaxis: { title: "Итерация", autorange: true },
         yaxis: { title: "Лучшее значение", autorange: true },
-        margin: { t: 80, r: 20, b: 20, l: 80 },
+        margin: { t: 80, r: 20, b: 80, l: 20 },
     };
 
     const trace = {
@@ -110,28 +29,25 @@ function initConvergencePlot() {
         name: "Лучшее значение",
     };
 
-    Plotly.newPlot("convergencePlot", [trace], layout);
+    Plotly.newPlot(graphDiv, [trace], layout);
 }
-function updateConvergencePlot(iteration, bestFitness) {
+
+function updateConvergencePlot(graphDiv, trace) {
+    Plotly.deleteTraces(graphDiv, 0);
+    Plotly.addTraces(graphDiv, { y: trace });
+}
+
+function extendConvergencePlot(graphDiv, iteration, bestFitness) {
     Plotly.extendTraces(
-        "convergencePlot",
+        graphDiv,
         {
             x: [[iteration]],
             y: [[bestFitness]],
         },
         [0]
     );
-
-    // По желанию ограничить количество точек, например, сбросить при слишком большом количестве
-    /* const maxPoints = 1000;
-    let currentLength =
-        document.getElementById("convergencePlot").data[0].x.length;
-    if (currentLength > maxPoints) {
-        Plotly.relayout("convergencePlot", {
-            "xaxis.range": [iteration - maxPoints, iteration],
-        });
-    }*/
 }
+
 function generateSurfaceData(func, xRange, yRange, resolution = 100) {
     const [xMin, xMax] = xRange;
     const [yMin, yMax] = yRange;
@@ -240,7 +156,7 @@ function updateGraph(f, plotSettings, population, minimum) {
     );
 
     if (plotSettings.equalScale) {
-        applyEqualScale(width, height, depth, f.boundsX, f.boundsY, zMax, zMin);
+        applyEqualScale(f.boundsX, f.boundsY, zMax, zMin);
     } else {
         applyRealScale(
             plotSettings,
@@ -297,9 +213,6 @@ function updateGraph(f, plotSettings, population, minimum) {
         plotSettings.showPopulation,
         plotSettings.pointSize
     );
-    /*if (minimum) {
-        addMinimum(f, minimum, plotSettings.pointSize);
-    }*/
     surface.rotateX(-Math.PI / 2);
     //surface.rotateZ(Math.PI);
 }
@@ -542,21 +455,13 @@ function addPoints(
     f,
     population,
     minimum,
-    showMinimum,
+    showPopulation,
     radius = 0.08,
-    surfacePlot = true,
-    iteration = 1,
-    best_fitness = 0,
     color = 0xff0000
 ) {
-    if (!surfacePlot) {
-        updateConvergencePlot(iteration, best_fitness);
-        return; // Чтобы не выполнять код для 3D
-    }
-
     scene.remove(minPoint);
     scene.remove(pointCloud);
-    if (population.length > 0 && showMinimum) {
+    if (population.length > 0 && showPopulation) {
         pointCloud = new THREE.Group(); // Группа для всех точек (сфер)
 
         const sphereGeometry = new THREE.SphereGeometry(radius, 10, 10);

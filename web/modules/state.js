@@ -10,8 +10,8 @@ export const state = {
     },
     plotSettings: {
         resolution: 50,
-        plotStyle: true,
-        showMinimum: true,
+        showSurface: true,
+        showPopulation: true,
         showGrid: false,
         equalScale: false,
         pointSize: 0.08,
@@ -30,6 +30,7 @@ export const state = {
             best_solution: undefined,
             best_fitness: undefined,
             iteration: 0,
+            history: [],
             total_iterations: 0,
         },
         cultural: {
@@ -38,6 +39,7 @@ export const state = {
             best_solution: undefined,
             best_fitness: undefined,
             iteration: 0,
+            history: [],
             total_iterations: 0,
         },
     },

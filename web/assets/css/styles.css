@@ -313,7 +313,7 @@ button:active,
   box-shadow: inset 2px 2px 5px rgb(28.1387755102, 47.5232653061, 125.0612244898), inset -5px -5px 10px rgb(37.506122449, 63.3436734694, 166.693877551);
 }
 
-#plotStyle {
+#showSurface {
   position: absolute;
   bottom: 10px;
   left: 10px;
