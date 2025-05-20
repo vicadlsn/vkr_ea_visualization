@@ -81,9 +81,9 @@ export function plotSurface(f, plotSettings, population = []) {
 }*/
 
 import { evaluateFunction } from "./func.js";
+import Plotly from "plotly.js-dist";
 import * as THREE from "three";
-import { OrbitControls } from "OrbitControls";
-
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 export {
     plotSurface,
     resetCamera,
@@ -195,10 +195,10 @@ function plotSurface(f, plotSettings, population = [], minimum = undefined) {
         // controls.maxPolarAngle =Math.PI / 2; // Ограничиваем движение камеры только по вертикали
         resetCamera();
 
-        const ambientLight = new THREE.AmbientLight(0xeeeeee, 1);
+        const ambientLight = new THREE.AmbientLight(0xeeeeee, 1.5);
         scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
         directionalLight.position.set(1, 1, 1).normalize();
         scene.add(directionalLight);
 
@@ -262,13 +262,10 @@ function updateGraph(f, plotSettings, population, minimum) {
         addAxes(
             scene,
             [-axeLength * surface.scale.x, axeLength * surface.scale.x],
-            // f.boundsX.map((v) => v * surface.scale.x),
-
             [-axeLength * surface.scale.y, axeLength * surface.scale.y],
             [Math.min(-5, Math.floor(zMin)), Math.max(5, Math.ceil(zMax))].map(
                 (v) => v * surface.scale.z
             )
-            // f.boundsY.map((v) => v * surface.scale.y)
         );
         addAxisTicks(scene, "x", -axeLength, axeLength, surface.scale.x);
         addAxisTicks(scene, "z", -axeLength, axeLength, surface.scale.y);
@@ -399,6 +396,7 @@ function getSurface(geometry, colors) {
         opacity: 0.9,
         transparent: true,
     });
+    // const material = new THREE.MeshBasicMaterial({ vertexColors: true });
 
     geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
@@ -519,7 +517,7 @@ function getSurfaceColors(data) {
 
             const hue = (1 - value) * 240; // от синего (240) к красному (0)
 
-            const saturation = 0.6;
+            const saturation = 0.7;
             const lightness = 0.5;
 
             // Преобразуем HSL в RGB
@@ -691,7 +689,7 @@ function addAxisTicks(scene, axis, rangeL, rangeR, scale) {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
-        ctx.fillStyle = "gray";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
         ctx.fillText(value, canvas.width / 2, canvas.height / 2);
 
         const texture = new THREE.CanvasTexture(canvas);
@@ -717,7 +715,7 @@ function addAxisTicks(scene, axis, rangeL, rangeR, scale) {
     }
 }
 
-// Функция для создания текстуры на канвасе с улучшениями
+// Функция для создания текстуры на канвасе
 function createTextTexture(
     text,
     fontSize,

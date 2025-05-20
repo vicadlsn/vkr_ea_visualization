@@ -12,6 +12,7 @@ import {
     initConvergencePlot,
     updateConvergencePlot,
 } from "./plot.js";
+
 export { updatePlot, updateMethodInfo };
 
 export let state = {

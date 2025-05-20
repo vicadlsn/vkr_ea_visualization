@@ -1,3 +1,5 @@
+import * as math from "mathjs";
+
 export {
     builtinFunctions,
     getFunctionData,

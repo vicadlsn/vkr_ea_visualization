@@ -1,6 +1,8 @@
-export { connectWebsocket };
 import { addPoints, initConvergencePlot } from "./plot.js";
-import { updateMethodInfo, state } from "./ui.js";
+import { updateMethodInfo } from "./ui.js";
+import { state } from "./state.js";
+
+export { connectWebsocket };
 
 const RECONNECT_INTERVALS = [1000, 2000, 4000];
 const MAX_RECONNECT_ATTEMPTS = 3;
