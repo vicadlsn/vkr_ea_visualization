@@ -1,4 +1,4 @@
-import * as math from "mathjs";
+import { parse } from "mathjs";
 
 export {
     builtinFunctions,
@@ -32,6 +32,43 @@ builtinFunctions["schwefel"] = {
     name: "Функция Швефеля",
 };
 
+const allowedFunctions = new Set([
+    /* основные математические функции */
+    "sqrt",
+    "cbrt", // ?
+    "abs",
+    "exp",
+    "log",
+    "log10",
+    "log2",
+
+    /* тригонометрические функции */
+    "sin",
+    "cos",
+    "tan",
+    "asin",
+    "acos",
+    "atan",
+
+    /* гиперболические функции надо? */
+    "sinh",
+    "cosh",
+    "tanh",
+    "asinh",
+    "acosh",
+    "atanh",
+
+    /* округление, ограничение и т.п., надо? */
+    "min",
+    "max",
+    "round",
+    "ceil",
+    "floor",
+    "mod",
+    "hypot",
+]);
+const allowedSymbols = new Set(["x", "y", "pi"]);
+
 const getFunctionLabels = () => {
     const entries = Object.entries(builtinFunctions);
     return entries.map(([key, value]) => {
@@ -42,16 +79,56 @@ const getFunctionLabels = () => {
     });
 };
 
+function isSafeNode(node) {
+    if (node.isOperatorNode) {
+        return (
+            ["+", "-", "*", "/", "^"].includes(node.op) &&
+            node.args.every(isSafeNode)
+        );
+    }
+
+    if (node.isFunctionNode) {
+        return (
+            allowedFunctions.has(node.fn.name) && node.args.every(isSafeNode)
+        );
+    }
+
+    if (node.isSymbolNode) {
+        return allowedSymbols.has(node.name);
+    }
+
+    if (node.isConstantNode) {
+        return true;
+    }
+
+    if (node.isParenthesisNode) {
+        return isSafeNode(node.content);
+    }
+
+    return false;
+}
+
 const getFunctionData = (expression) => {
-    try {
+    /*try {
         const parsed = math.parse(expression);
         parsed.evaluate({ x: 1, y: 1 });
         return { original: expression, parsed: parsed };
     } catch (error) {
         console.error("Ошибка парсинга:", error);
         return null;
+    }*/
+
+    try {
+        const parsed = parse(expression);
+        const safe = isSafeNode(parsed);
+        if (!safe) return null;
+        return { original: expression, parsed: parsed };
+    } catch (error) {
+        console.error("Ошибка парсинга:", error);
+        return null;
     }
 };
+
 const evaluateFunction = (func, variables) => {
     try {
         const scope = Object.assign({}, variables);
