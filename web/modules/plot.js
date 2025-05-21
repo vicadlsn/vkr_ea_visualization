@@ -41,7 +41,7 @@ function extendConvergencePlot(graphDiv, iteration, bestFitness) {
     Plotly.extendTraces(
         graphDiv,
         {
-            x: [[iteration]],
+            // x: [[iteration]],
             y: [[bestFitness]],
         },
         [0]
@@ -115,10 +115,10 @@ function plotSurface(f, plotSettings, population = [], minimum = undefined) {
         scene.add(ambientLight);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
-        //directionalLight.position.set(0, 10, -0).normalize();
-        //scene.add(directionalLight);
-        directionalLight.position.set(0, 0, 1);
-        camera.add(directionalLight);
+        directionalLight.position.set(0, 10, 0).normalize();
+        scene.add(directionalLight);
+        // directionalLight.position.set(0, 0, 1);
+        // camera.add(directionalLight);
         scene.add(camera);
 
         function animate() {
