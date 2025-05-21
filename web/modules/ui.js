@@ -308,8 +308,9 @@ function initTestFunctionOptions() {
 }
 
 function switchPlots() {
+    const tabData = getCurrentTabData();
     if (state.plotSettings.showSurface) {
-        document.getElementById("graph3d").style.visibility = "block";
+        document.getElementById("graph3d").style.display = "block";
         document.getElementById("convergencePlot").style.display = "none";
         plotSurface(
             state.currentFunction,
@@ -321,7 +322,7 @@ function switchPlots() {
         document.getElementById("graph3d").style.display = "none";
         document.getElementById("convergencePlot").style.display = "block";
         initConvergencePlot("convergencePlot");
-        updateConvergencePlot("convergencePlot", getCurrentTabData().history);
+        updateConvergencePlot("convergencePlot", tabData.history);
         //Plotly.Plots.resize(document.getElementById("convergencePlot"));
     }
 
@@ -393,6 +394,6 @@ export function initUI() {
 
     setupUI();
     updateMethodInfo();
-    // initConvergencePlot("convergencePlot");
+    //initConvergencePlot("convergencePlot");
     updatePlot();
 }
