@@ -187,7 +187,7 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
     best_solution, best_fitness = nothing, nothing
     try
         if method_id == "bbo"
-            best_solution, best_fitness =  BBO.bbo(ws, method_id, client_id, request_id, cancel_flags,  rlock, f_v, DIMENSION, params["population_size"], lower_bounds, upper_bounds, params["iterations_count"], params["mutation_probability"], params["blending_rate"])
+            best_solution, best_fitness =  BBO.bbo(ws, method_id, client_id, request_id, cancel_flags, f_v, DIMENSION, params["population_size"], lower_bounds, upper_bounds, params["iterations_count"], params["mutation_probability"], params["blending_rate"])
         elseif method_id == "cultural"
             best_solution, best_fitness = CAEP.cultural_algorithm(ws, method_id, client_id, request_id, cancel_flags,  rlock, f_v, DIMENSION, params["population_size"], lower_bounds, upper_bounds, params["iterations_count"])
         else
