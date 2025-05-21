@@ -18,7 +18,7 @@ function initConvergencePlot(graphDiv) {
         title: "График сходимости",
         xaxis: { title: "Итерация", autorange: true },
         yaxis: { title: "Лучшее значение", autorange: true },
-        margin: { t: 80, r: 20, b: 80, l: 20 },
+        margin: { t: 100, r: 60, b: 100, l: 60 },
     };
 
     const trace = {
@@ -111,12 +111,15 @@ function plotSurface(f, plotSettings, population = [], minimum = undefined) {
         // controls.maxPolarAngle =Math.PI / 2; // Ограничиваем движение камеры только по вертикали
         resetCamera();
 
-        const ambientLight = new THREE.AmbientLight(0xeeeeee, 1.5);
+        const ambientLight = new THREE.AmbientLight(0xeeeeee, 1.7);
         scene.add(ambientLight);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
-        directionalLight.position.set(1, 1, 1).normalize();
-        scene.add(directionalLight);
+        //directionalLight.position.set(0, 10, -0).normalize();
+        //scene.add(directionalLight);
+        directionalLight.position.set(0, 0, 1);
+        camera.add(directionalLight);
+        scene.add(camera);
 
         function animate() {
             requestAnimationFrame(animate);
