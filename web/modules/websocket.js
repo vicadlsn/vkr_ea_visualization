@@ -1,4 +1,8 @@
-import { addPoints, updateConvergencePlot } from "./plot.js";
+import {
+    addPoints,
+    extendConvergencePlot,
+    updateConvergencePlot,
+} from "./plot.js";
 import { updateMethodInfo } from "./ui.js";
 import { state } from "./state.js";
 
@@ -29,52 +33,11 @@ function connectWebsocket() {
         };
 
         currentSocket.onmessage = function (event) {
-            const data = JSON.parse(event.data);
-            console.log("Received message:", data);
-
-            const method_id = data.method_id;
-
-            if (data.action === "start_ack") {
-                /*if (state.activeRequests[method_id] === data.request_id) {
-                    //updateConvergencePlot("convergencePlot", state.tabsData[method_id].history);
-                }*/
-            } else if (
-                data.action === "stop_ack" ||
-                data.action === "complete" ||
-                data.action === "error"
-            ) {
-                if (state.activeRequests[method_id] === data.request_id) {
-                    delete state.activeRequests[method_id];
-                }
-            } /*else if (data.action === "error") {
-                if (state.activeRequests[method_id] === data.request_id) {
-                    delete state.activeRequests[method_id];
-                }
-                appStatusText.textContent = `Ошибка: ${data.message}`;
-            } */ else if (data.action === "iteration") {
-                const method_id = data.method_id;
-                state.tabsData[method_id].population = data["population"];
-                state.tabsData[method_id].best_solution = data["best_solution"];
-                state.tabsData[method_id].best_fitness = data["best_fitness"];
-                state.tabsData[method_id].iteration = data["iteration"];
-                state.tabsData[method_id].history.push(data["best_fitness"]);
-                if (method_id === state.currentTab) {
-                    updateMethodInfo();
-                    if (state.plotSettings.showSurface) {
-                        addPoints(
-                            state.currentFunction,
-                            state.tabsData[method_id].population,
-                            state.tabsData[method_id].best_solution,
-                            state.plotSettings.showPopulation,
-                            state.plotSettings.pointSize
-                        );
-                    } else {
-                        updateConvergencePlot(
-                            "convergencePlot",
-                            state.tabsData[method_id].history
-                        );
-                    }
-                }
+            try {
+                const data = JSON.parse(event.data);
+                handleMessage(data);
+            } catch (err) {
+                console.error("Invalid JSON received:", event.data, err);
             }
         };
 
@@ -115,5 +78,59 @@ function connectWebsocket() {
     }
 
     connect();
-    return currentSocket, sendMessage;
+    return sendMessage;
+}
+
+function handleMessage(data) {
+    console.log("Received message:", data);
+
+    const method_id = data.method_id;
+    const request_id = data.request_id;
+    const action = data.action;
+
+    switch (action) {
+        case "start_ack":
+            break;
+        case "stop_ack":
+        case "error":
+        case "complete":
+            if (state.activeRequests[method_id] !== request_id) {
+                break;
+            }
+
+            delete state.activeRequests[method_id];
+            if (
+                method_id === state.currentTab &&
+                !state.plotSettings.showSurface
+            ) {
+                updateConvergencePlot(
+                    document.getElementById("convergencePlot"),
+                    state.tabsData[method_id].history
+                );
+            }
+
+            break;
+        case "iteration":
+            if (state.activeRequests[method_id] !== request_id) {
+                break;
+            }
+
+            state.tabsData[method_id].population = data["population"];
+            state.tabsData[method_id].best_solution = data["best_solution"];
+            state.tabsData[method_id].best_fitness = data["best_fitness"];
+            state.tabsData[method_id].iteration = data["iteration"];
+            state.tabsData[method_id].history.push(data["best_fitness"]);
+            if (method_id === state.currentTab) {
+                updateMethodInfo();
+                if (state.plotSettings.showSurface) {
+                    addPoints(
+                        state.currentFunction,
+                        state.tabsData[method_id].population,
+                        state.tabsData[method_id].best_solution,
+                        state.plotSettings.showPopulation,
+                        state.plotSettings.pointSize
+                    );
+                }
+            }
+    }
 }

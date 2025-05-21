@@ -11,8 +11,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "appState"
     ).textContent = `Нет соединения с Websocket сервером...`;
 
-    let socket,
-        sendMessage = connectWebsocket();
+    let sendMessage = connectWebsocket();
     const startButton = document.getElementById("startOptimization");
     const stopButton = document.getElementById("stopOptimization");
     const appState = document.getElementById("appState");
