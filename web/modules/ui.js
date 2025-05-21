@@ -18,6 +18,7 @@ import {
 export { updatePlot, updateMethodInfo };
 
 const info = document.getElementById("methodInfoContent");
+const convergencePlotDiv = document.getElementById("convergencePlot");
 
 function restoreStateFunctionChange() {
     getCurrentTabData().population = [];
@@ -66,7 +67,7 @@ function updatePlot() {
             tabData.best_solution
         );
     } else {
-        updateConvergencePlot("convergencePlot", tabData.history);
+        updateConvergencePlot(convergencePlotDiv, tabData.history);
     }
 }
 
@@ -311,7 +312,7 @@ function switchPlots() {
     const tabData = getCurrentTabData();
     if (state.plotSettings.showSurface) {
         document.getElementById("graph3d").style.display = "block";
-        document.getElementById("convergencePlot").style.display = "none";
+        convergencePlotDiv.style.display = "none";
         plotSurface(
             state.currentFunction,
             state.plotSettings,
@@ -320,10 +321,10 @@ function switchPlots() {
         );
     } else {
         document.getElementById("graph3d").style.display = "none";
-        document.getElementById("convergencePlot").style.display = "block";
-        initConvergencePlot("convergencePlot");
-        updateConvergencePlot("convergencePlot", tabData.history);
-        //Plotly.Plots.resize(document.getElementById("convergencePlot"));
+        convergencePlotDiv.style.display = "block";
+        initConvergencePlot(convergencePlotDiv);
+        updateConvergencePlot(convergencePlotDiv, tabData.history);
+        //Plotly.Plots.resize(document.getElementById(convergencePlotDiv));
     }
 
     //updatePlot();
@@ -357,13 +358,15 @@ function setupUI() {
             : "Показать популяцию";
         //updatePlot();
         let tab = getCurrentTabData();
-        addPoints(
-            state.currentFunction,
-            tab.population,
-            tab.best_solution,
-            state.plotSettings.showPopulation,
-            state.plotSettings.pointSize
-        );
+        if (state.plotSettings.showSurface) {
+            addPoints(
+                state.currentFunction,
+                tab.population,
+                tab.best_solution,
+                state.plotSettings.showPopulation,
+                state.plotSettings.pointSize
+            );
+        }
     });
 
     const showGrid = document.getElementById("showGrid");
@@ -394,6 +397,6 @@ export function initUI() {
 
     setupUI();
     updateMethodInfo();
-    //initConvergencePlot("convergencePlot");
+    //initConvergencePlot(convergencePlotDiv);
     updatePlot();
 }
