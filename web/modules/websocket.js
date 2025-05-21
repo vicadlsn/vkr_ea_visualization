@@ -85,9 +85,7 @@ function connectWebsocket() {
                     RECONNECT_INTERVALS[reconnectAttempts] ||
                     RECONNECT_INTERVALS[RECONNECT_INTERVALS.length - 1];
                 reconnectAttempts++;
-                appStatusText.textContent = `Соединение закрыто, переподключение через ${
-                    delay / 1000
-                }с...`;
+                appStatusText.textContent = `Соединение закрыто, переподключение...`;
                 setTimeout(connect, delay);
             } else {
                 appStatusText.textContent =
