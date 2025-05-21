@@ -1,7 +1,7 @@
-import { evaluateFunction } from "./func.js";
-import Plotly from "plotly.js-dist-min";
-import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { evaluateFunction } from './func.js';
+import Plotly from 'plotly.js-dist-min';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 export {
     plotSurface,
     resetCamera,
@@ -15,18 +15,18 @@ const sceneBackgroundColor = 0xe6e7ee;
 
 function initConvergencePlot(graphDiv) {
     const layout = {
-        title: "График сходимости",
-        xaxis: { title: "Итерация", autorange: true },
-        yaxis: { title: "Лучшее значение", autorange: true },
+        title: 'График сходимости',
+        xaxis: { title: 'Итерация', autorange: true },
+        yaxis: { title: 'Лучшее значение', autorange: true },
         margin: { t: 100, r: 60, b: 100, l: 60 },
     };
 
     const trace = {
         x: [],
         y: [],
-        mode: "lines+markers",
-        line: { color: "blue" },
-        name: "Лучшее значение",
+        mode: 'lines+markers',
+        line: { color: 'blue' },
+        name: 'Лучшее значение',
     };
 
     Plotly.newPlot(graphDiv, [trace], layout);
@@ -44,7 +44,7 @@ function extendConvergencePlot(graphDiv, iteration, bestFitness) {
             // x: [[iteration]],
             y: [[bestFitness]],
         },
-        [0]
+        [0],
     );
 }
 
@@ -54,16 +54,14 @@ function generateSurfaceData(func, xRange, yRange, resolution = 100) {
 
     const x = Array.from(
         { length: resolution },
-        (_, i) => xMin + ((xMax - xMin) * i) / (resolution - 1)
+        (_, i) => xMin + ((xMax - xMin) * i) / (resolution - 1),
     );
     const y = Array.from(
         { length: resolution },
-        (_, i) => yMin + ((yMax - yMin) * i) / (resolution - 1)
+        (_, i) => yMin + ((yMax - yMin) * i) / (resolution - 1),
     );
 
-    const z = x.map((xVal) =>
-        y.map((yVal) => evaluateFunction(func, { x: xVal, y: yVal }))
-    );
+    const z = x.map((xVal) => y.map((yVal) => evaluateFunction(func, { x: xVal, y: yVal })));
 
     return { x, y, z };
 }
@@ -85,17 +83,14 @@ let surface,
 
 function plotSurface(f, plotSettings, population = [], minimum = undefined) {
     if (!scene) {
-        const container = document.getElementById("graph3d");
+        const container = document.getElementById('graph3d');
         if (!container) return;
-        container.innerHTML = "";
+        container.innerHTML = '';
 
         scene = new THREE.Scene();
         scene.background = new THREE.Color(sceneBackgroundColor);
 
-        camera = new THREE.PerspectiveCamera(
-            45,
-            container.clientWidth / container.clientHeight
-        );
+        camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight);
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
@@ -145,25 +140,21 @@ function updateGraph(f, plotSettings, population, minimum) {
         f.function,
         f.boundsX,
         f.boundsY,
-        plotSettings.resolution
+        plotSettings.resolution,
     );
 
     let { geometry, vertices } = getSurfaceGeometry(f, { x, y, z });
     let colors = getSurfaceColors({ x, y, z }, vertices);
     surface = getSurface(geometry, colors);
 
-    const { width, height, zMax, zMin, depth } = calculateRanges(
-        f.boundsX,
-        f.boundsY,
-        z
-    );
+    const { zMax, zMin } = calculateZRanges(f.boundsX, f.boundsY, z);
 
     if (plotSettings.equalScale) {
         applyEqualScale(f.boundsX, f.boundsY, zMax, zMin);
     } else {
         applyRealScale(
             plotSettings,
-            100
+            100,
             //Math.floor(Math.max(width, height) / 2) * 2
         );
         let axeLength = Math.ceil(
@@ -171,11 +162,10 @@ function updateGraph(f, plotSettings, population, minimum) {
                 Math.abs(f.boundsX[0]),
                 Math.abs(f.boundsX[1]),
                 Math.abs(f.boundsY[0]),
-                Math.abs(f.boundsY[1])
-            )
+                Math.abs(f.boundsY[1]),
+            ),
         );
         addGrid(scene, axeLength * 2);
-        const scale = Math.min(surface.scale.x, surface.scale.y);
         grid.scale.set(surface.scale.x, 1, surface.scale.y);
         //  grid.rotateX(-Math.PI / 2);
         addAxes(
@@ -183,17 +173,17 @@ function updateGraph(f, plotSettings, population, minimum) {
             [-axeLength * surface.scale.x, axeLength * surface.scale.x],
             [-axeLength * surface.scale.y, axeLength * surface.scale.y],
             [Math.min(-5, Math.floor(zMin)), Math.max(5, Math.ceil(zMax))].map(
-                (v) => v * surface.scale.z
-            )
+                (v) => v * surface.scale.z,
+            ),
         );
-        addAxisTicks(scene, "x", -axeLength, axeLength, surface.scale.x);
-        addAxisTicks(scene, "z", -axeLength, axeLength, surface.scale.y);
+        addAxisTicks(scene, 'x', -axeLength, axeLength, surface.scale.x);
+        addAxisTicks(scene, 'z', -axeLength, axeLength, surface.scale.y);
         addAxisTicks(
             scene,
-            "y",
+            'y',
             Math.min(-5, Math.floor(zMin)),
             Math.max(5, Math.ceil(zMax)),
-            surface.scale.z
+            surface.scale.z,
         );
     }
 
@@ -201,21 +191,11 @@ function updateGraph(f, plotSettings, population, minimum) {
     if (plotSettings.showGrid) {
         addGridToSurface(x, y, z, scene);
 
-        surfaceGrid.scale.set(
-            surface.scale.x,
-            surface.scale.y,
-            surface.scale.z
-        );
+        surfaceGrid.scale.set(surface.scale.x, surface.scale.y, surface.scale.z);
         surfaceGrid.rotateX(-Math.PI / 2);
         //surfaceGrid.rotateZ(Math.PI);
     }
-    addPoints(
-        f,
-        population,
-        minimum,
-        plotSettings.showPopulation,
-        plotSettings.pointSize
-    );
+    addPoints(f, population, minimum, plotSettings.showPopulation, plotSettings.pointSize);
     surface.rotateX(-Math.PI / 2);
     //surface.rotateZ(Math.PI);
 }
@@ -270,15 +250,15 @@ function removeAxesAndLabels() {
     });
 }
 
-function calculateRanges(boundsX, boundsY, z) {
-    let width = Math.abs(boundsX[1] - boundsX[0]);
-    let height = Math.abs(boundsY[1] - boundsY[0]);
+function calculateZRanges(boundsX, boundsY, z) {
+    //let width = Math.abs(boundsX[1] - boundsX[0]);
+    //let height = Math.abs(boundsY[1] - boundsY[0]);
     let allZValues = z.flat();
     let zMax = Math.max(...allZValues),
         zMin = Math.min(...allZValues);
-    let depth = Math.abs(zMax - zMin);
+    //let depth = Math.abs(zMax - zMin);
 
-    return { width, height, zMax, zMin, depth };
+    return { zMax, zMin };
 }
 
 function applyEqualScale(boundsX, boundsY, zMax, zMin) {
@@ -288,20 +268,16 @@ function applyEqualScale(boundsX, boundsY, zMax, zMin) {
     const ySize = boundsY[1] - boundsY[0];
     const zSize = zMax - zMin;
 
-    surface.scale.set(
-        scaleFactor / xSize,
-        scaleFactor / ySize,
-        scaleFactor / zSize
-    );
+    surface.scale.set(scaleFactor / xSize, scaleFactor / ySize, scaleFactor / zSize);
 
     surface.position.set(0, 0, 0);
 }
 
-function applyRealScale(plotSettings, length = 100) {
+function applyRealScale(plotSettings) {
     surface.scale.set(
         plotSettings.aspectratioX,
         plotSettings.aspectratioY,
-        plotSettings.aspectratioZ
+        plotSettings.aspectratioZ,
     );
 }
 
@@ -314,7 +290,7 @@ function getSurface(geometry, colors) {
     });
     // const material = new THREE.MeshBasicMaterial({ vertexColors: true });
 
-    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     let surface = new THREE.Mesh(geometry, material);
     // surface.rotation.x = Math.PI / 2;
@@ -328,7 +304,7 @@ function getSurfaceGeometry(f, data) {
         f.boundsX[1] - f.boundsX[0], // ширина по оси X
         f.boundsY[1] - f.boundsY[0], // высота по оси Y
         x.length - 1, // количество делений по оси X
-        y.length - 1 // количество делений по оси Y
+        y.length - 1, // количество делений по оси Y
     );
 
     const vertices = geometry.attributes.position.array;
@@ -437,11 +413,7 @@ function getSurfaceColors(data) {
             const lightness = 0.5;
 
             // Преобразуем HSL в RGB
-            const color = new THREE.Color().setHSL(
-                hue / 360,
-                saturation,
-                lightness
-            ); // hue делим на 360 для корректной работы с THREE.js
+            const color = new THREE.Color().setHSL(hue / 360, saturation, lightness); // hue делим на 360 для корректной работы с THREE.js
 
             const idx = (i * y.length + j) * 3; // Индекс для RGB (умножаем на 3)
 
@@ -454,14 +426,7 @@ function getSurfaceColors(data) {
     return colors;
 }
 
-function addPoints(
-    f,
-    population,
-    minimum,
-    showPopulation,
-    radius = 0.08,
-    color = 0xff0000
-) {
+function addPoints(f, population, minimum, showPopulation, radius = 0.08, color = 0xff0000) {
     scene.remove(minPoint);
     scene.remove(pointCloud);
     if (population.length > 0 && showPopulation) {
@@ -536,9 +501,9 @@ function addAxisTicks(scene, axis, rangeL, rangeR, scale) {
     const fontSize = 48;
 
     let step = 1;
-    const range = Math.abs(rangeR - rangeL);
-    //if (range > 10) step = 100;
-    /* if (scale < 0.5) {
+    /*const range = Math.abs(rangeR - rangeL);
+    if (range > 10) step = 100;
+     if (scale < 0.5) {
         step = Math.floor(Math.abs(rangeR - rangeL) / 10);
     }
     */
@@ -557,25 +522,22 @@ function addAxisTicks(scene, axis, rangeL, rangeR, scale) {
         if (value == 0) continue;
         let position = i * scale;
 
-        if (axis === "z") position *= -1;
+        if (axis === 'z') position *= -1;
 
         // Добавляем черточки
         let tickStart, tickEnd;
-        if (axis === "x") {
+        if (axis === 'x') {
             tickStart = new THREE.Vector3(position, -tickSize / 2, 0);
             tickEnd = new THREE.Vector3(position, tickSize / 2, 0);
-        } else if (axis === "y") {
+        } else if (axis === 'y') {
             tickStart = new THREE.Vector3(-tickSize / 2, position, 0);
             tickEnd = new THREE.Vector3(tickSize / 2, position, 0);
-        } else if (axis === "z") {
+        } else if (axis === 'z') {
             tickStart = new THREE.Vector3(0, -tickSize / 2, position);
             tickEnd = new THREE.Vector3(0, tickSize / 2, position);
         }
 
-        const tickGeometry = new THREE.BufferGeometry().setFromPoints([
-            tickStart,
-            tickEnd,
-        ]);
+        const tickGeometry = new THREE.BufferGeometry().setFromPoints([tickStart, tickEnd]);
         const tickMaterial = new THREE.LineBasicMaterial({
             color: 0x222222,
         });
@@ -584,20 +546,20 @@ function addAxisTicks(scene, axis, rangeL, rangeR, scale) {
         axisTicks.push(tick);
 
         // Добавляем подписи
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
 
         canvas.width = ctx.measureText(toString(value)).width * 3;
         canvas.height = ctx.measureText(toString(value)).width * 1.5;
 
-        ctx.fillStyle = "rgba(255, 255, 255, 0)";
+        ctx.fillStyle = 'rgba(255, 255, 255, 0)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.font = `bold ${fontSize}px Arial`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
 
-        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
         ctx.fillText(value, canvas.width / 2, canvas.height / 2);
 
         const texture = new THREE.CanvasTexture(canvas);
@@ -610,11 +572,11 @@ function addAxisTicks(scene, axis, rangeL, rangeR, scale) {
         const sprite = new THREE.Sprite(spriteMaterial);
         sprite.scale.set(tickSize * 3, tickSize * 1.5, 1);
 
-        if (axis === "x") {
+        if (axis === 'x') {
             sprite.position.set(position, -tickSize * 3, 0);
-        } else if (axis === "y") {
+        } else if (axis === 'y') {
             sprite.position.set(-tickSize * 3, position, 0);
-        } else if (axis === "z") {
+        } else if (axis === 'z') {
             sprite.position.set(0, -tickSize * 3, position);
         }
 
@@ -624,25 +586,20 @@ function addAxisTicks(scene, axis, rangeL, rangeR, scale) {
 }
 
 // Функция для создания текстуры на канвасе
-function createTextTexture(
-    text,
-    fontSize,
-    textColor = "black",
-    forAxis = false
-) {
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
+function createTextTexture(text, fontSize, textColor = 'black', forAxis = false) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
     ctx.font = `bold ${fontSize}px Arial`;
     if (forAxis) {
         canvas.width = fontSize * 4;
         canvas.height = fontSize * 2;
     }
-    ctx.fillStyle = "rgba(255, 255, 255, 0)";
+    ctx.fillStyle = 'rgba(255, 255, 255, 0)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = textColor;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
     ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 
     const texture = new THREE.CanvasTexture(canvas);
@@ -650,13 +607,7 @@ function createTextTexture(
 }
 
 // Функция для создания подписи с использованием канваса
-function createLabel(
-    text,
-    position,
-    fontSize,
-    textColor = "black",
-    forAxis = false
-) {
+function createLabel(text, position, fontSize, textColor = 'black', forAxis = false) {
     const texture = createTextTexture(text, fontSize, textColor, forAxis);
     const spriteMaterial = new THREE.SpriteMaterial({
         map: texture,
@@ -695,10 +646,7 @@ function addAxes(scene, xRange, yRange, zRange) {
         yRange[1], // Ось Y
     ];
 
-    axesGeometry.setAttribute(
-        "position",
-        new THREE.Float32BufferAttribute(axesVertices, 3)
-    );
+    axesGeometry.setAttribute('position', new THREE.Float32BufferAttribute(axesVertices, 3));
     const axes = new THREE.LineSegments(axesGeometry, axesMaterial);
     scene.add(axes);
 
@@ -711,16 +659,10 @@ function addAxes(scene, xRange, yRange, zRange) {
         new THREE.Vector3(1, 0, 0),
         new THREE.Vector3(xRange[1], 0, 0),
         arrowLength,
-        arrowColor
+        arrowColor,
     );
     scene.add(arrowX);
-    createLabel(
-        "X",
-        new THREE.Vector3(xRange[1] + 0.05 + arrowLength, -0.3, 0),
-        72,
-        "black",
-        true
-    );
+    createLabel('X', new THREE.Vector3(xRange[1] + 0.05 + arrowLength, -0.3, 0), 72, 'black', true);
     arrowX.scale.y *= Math.sign(surface.scale.x);
 
     // Стрелка для оси Y
@@ -728,15 +670,15 @@ function addAxes(scene, xRange, yRange, zRange) {
         new THREE.Vector3(0, 0, -1),
         new THREE.Vector3(0, 0, yRange[0]),
         arrowLength,
-        arrowColor
+        arrowColor,
     );
     scene.add(arrowY);
     createLabel(
-        "Y",
+        'Y',
         new THREE.Vector3(-0.3, 0, -yRange[1] - 0.05 - arrowLength),
         72,
-        "black",
-        true
+        'black',
+        true,
     );
     arrowY.scale.y *= Math.sign(surface.scale.y);
     // Стрелка для оси Z
@@ -744,12 +686,9 @@ function addAxes(scene, xRange, yRange, zRange) {
         new THREE.Vector3(0, 1, 0),
         new THREE.Vector3(0, zRange[1], 0),
         arrowLength,
-        arrowColor
+        arrowColor,
     );
     scene.add(arrowZ);
-    createLabel(
-        "Z",
-        new THREE.Vector3(0, zRange[1] + 0.05 + arrowLength, -0.3)
-    );
+    createLabel('Z', new THREE.Vector3(0, zRange[1] + 0.05 + arrowLength, -0.3));
     arrowZ.scale.y *= Math.sign(surface.scale.z);
 }
