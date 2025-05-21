@@ -1,13 +1,13 @@
 using HTTP
 using Sockets
 using JSON
-using GeneralizedGenerated
 using Base.Threads
 using UUIDs
 
 include("./bbo.jl")
 include("./caep.jl")
 include("./ca.jl")
+include("./math.jl")
 
 const DIMENSION = 2
 
@@ -88,15 +88,19 @@ function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimizations
 
             f_expr = data["function"]
             f = try
-                expr = Meta.parse(f_expr)
-                mk_function(:( (x, y) -> ($expr) )) # скобки ($expr) нужны или нет???
+                MathParser.make_function_v2(f_expr)
             catch e
                 @error "Failed to parse function: $e" func=f_expr
+                send_error(ws, client_id, request_id, "Failed to parse function")
+                continue
+            end
+
+            if isnothing(f)
+                @error "Invalid function: $e" func=f_expr
                 send_error(ws, client_id, request_id, "Invalid function")
                 continue
             end
 
-            f_wrapped = v -> f(v[1], v[2])
             params = data["params"]
             params["population_size"] = data["population_size"]
             params["lower_bounds"] = data["lower_bounds"]
@@ -120,7 +124,7 @@ function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimizations
                             "method_id" => method_id,
                             "status" => "ok"
                         )))
-                        optimize(ws, f_wrapped, method_id, client_id, request_id, params, cancel_flags, rlock)
+                        optimize(ws, f, method_id, client_id, request_id, params, cancel_flags, rlock)
                     catch e
                         @error "Optimization failed: $e" method_id=method_id
                         send_error(ws, client_id, request_id, "Optimization error: $e")
@@ -174,7 +178,7 @@ function validate_start_params(data)
     return true
 end
 
-function optimize(ws::HTTP.WebSocket, f_wrapped, method_id::String, client_id::String, request_id::String, params::Dict{String, Any}, cancel_flags::Dict{String, Bool}, rlock::ReentrantLock)
+function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String, request_id::String, params::Dict{String, Any}, cancel_flags::Dict{String, Bool}, rlock::ReentrantLock)
     lower_bounds = [Float64(p) for p in params["lower_bounds"]]
     upper_bounds = [Float64(p) for p in params["upper_bounds"]]
 
@@ -183,9 +187,9 @@ function optimize(ws::HTTP.WebSocket, f_wrapped, method_id::String, client_id::S
     best_solution, best_fitness = nothing, nothing
     try
         if method_id == "bbo"
-            best_solution, best_fitness =  BBO.bbo(ws, method_id, client_id, request_id, cancel_flags,  rlock, f_wrapped, DIMENSION, params["population_size"], lower_bounds, upper_bounds, params["iterations_count"], params["mutation_probability"], params["blending_rate"])
+            best_solution, best_fitness =  BBO.bbo(ws, method_id, client_id, request_id, cancel_flags,  rlock, f_v, DIMENSION, params["population_size"], lower_bounds, upper_bounds, params["iterations_count"], params["mutation_probability"], params["blending_rate"])
         elseif method_id == "cultural"
-            best_solution, best_fitness = CAEP.cultural_algorithm(ws, method_id, client_id, request_id, cancel_flags,  rlock, f_wrapped, DIMENSION, params["population_size"], lower_bounds, upper_bounds, params["iterations_count"])
+            best_solution, best_fitness = CAEP.cultural_algorithm(ws, method_id, client_id, request_id, cancel_flags,  rlock, f_v, DIMENSION, params["population_size"], lower_bounds, upper_bounds, params["iterations_count"])
         else
             @error "Unknown method" method_id=method_id
             send_error(ws, client_id, request_id, "Unknown method")
