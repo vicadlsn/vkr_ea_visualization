@@ -15,26 +15,41 @@ const sceneBackgroundColor = 0xe6e7ee;
 
 function initConvergencePlot(graphDiv) {
     const layout = {
-        title: 'График сходимости',
-        xaxis: { title: 'Итерация', autorange: true },
-        yaxis: { title: 'Лучшее значение', autorange: true },
-        margin: { t: 100, r: 60, b: 100, l: 60 },
+        title: { text: 'График сходимости:' },
+
+        xaxis: { title: { text: 'Итерация' }, autorange: true },
+        yaxis: { title: { text: 'Лучшее значение' }, autorange: true },
+        margin: { t: 100, r: 70, b: 100, l: 70 },
     };
 
     const trace = {
         x: [],
         y: [],
         mode: 'lines+markers',
-        line: { color: 'blue' },
-        name: 'Лучшее значение',
+        line: { color: '#2d4cc8' },
+        name: { text: 'Лучшее значение' },
     };
 
     Plotly.newPlot(graphDiv, [trace], layout);
 }
 
 function updateConvergencePlot(graphDiv, trace) {
+    /* const layout = {
+        title: 'График сходимости',
+        xaxis: { title: 'Итерация', autorange: true },
+        yaxis: { title: 'Лучшее значение', autorange: true },
+        margin: { t: 100, r: 60, b: 100, l: 60 },
+    };*/
+
+    const y = {
+        y: trace,
+        mode: 'lines+markers',
+        line: { color: '#2d4cc8' },
+        name: { text: 'Лучшее значение' },
+    };
+
     Plotly.deleteTraces(graphDiv, 0);
-    Plotly.addTraces(graphDiv, { y: trace });
+    Plotly.addTraces(graphDiv, y);
 }
 
 function extendConvergencePlot(graphDiv, iteration, bestFitness) {

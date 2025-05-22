@@ -1,7 +1,7 @@
 import { state, getCurrentTabData, getCurrentTabDataFunction, METHOD_NAMES } from './state.js';
 
 import { getFunctionData, getFunctionLabels, builtinFunctions } from './func.js';
-
+import Plotly from 'plotly.js-dist-min';
 import {
     plotSurface,
     resetCamera,
@@ -15,7 +15,7 @@ export { updatePlot, updateMethodInfo, getCurrentTabData };
 const funcInputErrMsg = 'Ошибка ввода функции.';
 const info = document.getElementById('methodInfoContent');
 const convergencePlotDiv = document.getElementById('convergencePlot');
-
+let isConvergenceInitialized = false;
 function restoreStateFunctionChange() {
     const tab = getCurrentTabData();
     tab.population = [];
@@ -292,6 +292,7 @@ function setupAlgorithmParams() {
             bboMutationInput.value,
         );
         state.tabsData[METHOD_NAMES.bbo].params.blending_rate = parseFloat(bboBlendingInput.value);
+        updateNumElites();
     }
 
     function updateCulturalParams() {
@@ -302,9 +303,16 @@ function setupAlgorithmParams() {
     populationInput.addEventListener('change', updateGeneralParams);
     iterationsInput.addEventListener('change', updateGeneralParams);
 
-    bboMutationInput.addEventListener('change', updateBBOParams);
-    bboBlendingInput.addEventListener('change', updateBBOParams);
-    bboNumElites.addEventListener('change', () => {
+    bboMutationInput.addEventListener('change', () => {
+        state.tabsData[METHOD_NAMES.bbo].params.mutation_probability = parseFloat(
+            bboMutationInput.value,
+        );
+    });
+    bboBlendingInput.addEventListener('change', () => {
+        state.tabsData[METHOD_NAMES.bbo].params.blending_rate = parseFloat(bboBlendingInput.value);
+    });
+
+    function updateNumElites() {
         const value = parseFloat(bboNumElites.value);
         console.log(
             value,
@@ -322,7 +330,8 @@ function setupAlgorithmParams() {
         }
         setInput(bboNumElites, true, document.getElementById('bbo_num_elites_error'));
         state.tabsData[METHOD_NAMES.bbo].params.num_elites = value;
-    });
+    }
+    bboNumElites.addEventListener('change', updateNumElites);
 
     culturalParamInput.addEventListener('change', updateCulturalParams);
 
@@ -361,9 +370,14 @@ function switchPlots() {
     } else {
         document.getElementById('graph3d').style.display = 'none';
         convergencePlotDiv.style.display = 'block';
-        initConvergencePlot(convergencePlotDiv);
+        //Plotly.Plots.resize(convergencePlotDiv);
+        //initConvergencePlot(convergencePlotDiv);
+        if (!isConvergenceInitialized) {
+            initConvergencePlot(convergencePlotDiv);
+            isConvergenceInitialized = true;
+        }
         updateConvergencePlot(convergencePlotDiv, tabData.history);
-        //Plotly.Plots.resize(document.getElementById(convergencePlotDiv));
+        Plotly.Plots.resize(convergencePlotDiv);
     }
 
     //updatePlot();
@@ -434,6 +448,13 @@ export function initUI() {
 
     setupUI();
     updateMethodInfo();
-    //initConvergencePlot(convergencePlotDiv);
+    // initConvergencePlot(convergencePlotDiv);
+
     updatePlot();
 }
+
+/*<div class="graph shadow-container" id="graph3d" style="width: 100%; height: 100%;">
+                </div>
+                <div class=" graph shadow-container" id="convergencePlot"></div>
+                <button id="showSurface" style="width:100px;">График сходимости</button>
+                 */
