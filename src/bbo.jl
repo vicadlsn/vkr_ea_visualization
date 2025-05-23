@@ -47,7 +47,7 @@ function sort_population(population, fitness)
     return population[indices], fitness[indices]
 end
 
-function bbo(ws, task_key::String, client_id, request_id, cancel_flags::Dict{String, Bool}, objective_function, dim, population_size, lower_bound, upper_bound, max_generations, mutation_probability, alpha=0, num_elites=2)
+function bbo(ws, task_key, client_id, request_id, cancel_flags::Dict{String, Bool}, objective_function, dim, population_size, lower_bound, upper_bound, max_generations, mutation_probability, alpha, num_elites)
     # Инициализация популяции
     population = initialize_population(dim, population_size, lower_bound, upper_bound)
     fitness = evaluate_population(population, objective_function)
@@ -55,8 +55,10 @@ function bbo(ws, task_key::String, client_id, request_id, cancel_flags::Dict{Str
     # Сортировка популяции по пригодности
     population, fitness = sort_population(population, fitness)
 
-    best_fitness = nothing
-    best_solution = nothing
+    best_fitness = fitness[1]
+    best_solution = population[1]
+    current_best_fitness = fitness[1]
+    current_best_solution = population[1]
 
     for generation in 1:max_generations
             if get(cancel_flags, task_key, false)
@@ -110,13 +112,17 @@ function bbo(ws, task_key::String, client_id, request_id, cancel_flags::Dict{Str
         population, fitness = sort_population(population, fitness)
 
         # Сохранение лучшего решения
-        best_fitness = fitness[1]
-        best_solution = population[1]
+        current_best_fitness = fitness[1]
+        current_best_solution = population[1]
+        if current_best_fitness < best_fitness
+            best_fitness = current_best_fitness
+            best_solution = current_best_solution
+        end
 
         # Отображение результатов по итерациям
-        #println("Поколение $generation: Лучшее значение = $(fitness[1])")
+       # println("Поколение $generation: Лучшее значение = $(fitness[1])")
 
-        send_optimization_data(ws, task_key, client_id, request_id, generation, best_fitness, best_solution, population)
+        send_optimization_data(ws, task_key, client_id, request_id, generation, best_fitness, best_solution, current_best_fitness, current_best_solution, population)
     end
 
     return best_solution, best_fitness
