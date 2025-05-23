@@ -8,7 +8,7 @@ include("./bbo.jl")
 include("./caep.jl")
 include("./ca.jl")
 include("./math.jl")
-
+include("./hs.jl")
 const DIMENSION = 2
 
 function cleanup_tasks(optimizations::Dict{String, Task}, cancel_flags::Dict{String, Bool}, rlock::ReentrantLock)
@@ -102,7 +102,6 @@ function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimizations
             end
 
             params = data["params"]
-            params["population_size"] = data["population_size"]
             params["lower_bounds"] = data["lower_bounds"]
             params["upper_bounds"] = data["upper_bounds"]
             params["iterations_count"] = data["iterations_count"]
@@ -163,7 +162,7 @@ function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimizations
 end
 
 function validate_start_params(data)
-    required_fields = ["function", "method_id", "params", "population_size", "lower_bounds", "upper_bounds", "iterations_count"]
+    required_fields = ["function", "method_id", "params", "lower_bounds", "upper_bounds", "iterations_count"]
     for field in required_fields
         if !haskey(data, field)
             return false
@@ -172,7 +171,7 @@ function validate_start_params(data)
     if !isa(data["lower_bounds"], Vector) || !isa(data["upper_bounds"], Vector) || length(data["lower_bounds"]) != 2 || length(data["upper_bounds"]) != 2
         return false
     end
-    if data["population_size"] < 1 || data["iterations_count"] < 1
+    if data["iterations_count"] < 1
         return false
     end
     return true
@@ -187,9 +186,35 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
     best_solution, best_fitness = nothing, nothing
     try
         if method_id == "bbo"
-            best_solution, best_fitness =  BBO.bbo(ws, method_id, client_id, request_id, cancel_flags, f_v, DIMENSION, params["population_size"], lower_bounds, upper_bounds, params["iterations_count"], params["mutation_probability"], params["blending_rate"])
+            best_solution, best_fitness =  BBO.bbo(ws, method_id, client_id, request_id, cancel_flags, f_v, DIMENSION, params["islands_count"], lower_bounds, upper_bounds, params["iterations_count"], params["mutation_probability"], params["blending_rate"], params["num_elites"])
         elseif method_id == "cultural"
             best_solution, best_fitness = CAEP.cultural_algorithm(ws, method_id, client_id, request_id, cancel_flags,  rlock, f_v, DIMENSION, params["population_size"], lower_bounds, upper_bounds, params["iterations_count"])
+        elseif method_id == "harmony"
+            dim = DIMENSION
+            hms = params["hms"]
+            max_iters = params["iterations_count"]
+            mode = get(params, "mode", "canonical")
+            println(params)
+            if mode == "canonical"
+                hmcr = params["hmcr"]
+                par = params["par"]
+                bw = params["bw"]
+                best_solution, best_fitness = HS.harmony_search(
+                    ws, method_id, client_id, request_id, cancel_flags,
+                    f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
+                    hmcr=hmcr, par=par, bw=bw, mode="canonical"
+                )
+            elseif mode == "adaptive"
+                best_solution, best_fitness = HS.harmony_search(
+                    ws, method_id, client_id, request_id, cancel_flags,
+                    f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
+                    mode="adaptive"
+                )
+            else
+                @error "Unknown HS mode" mode
+                send_error(ws, client_id, request_id, "Unknown Harmony Search mode: $mode")
+                return
+            end
         else
             @error "Unknown method" method_id=method_id
             send_error(ws, client_id, request_id, "Unknown method")
