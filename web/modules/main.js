@@ -30,6 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const method_id = tab.method_name;
         const request_id = state.activeRequests[method_id];
 
+        // delete state.activeRequests[method_id];
+
         sendMessage({
             action: 'stop',
             request_id: request_id,
@@ -38,9 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('got-websocket-message', handleWebsocketMessage);
-    document.addEventListener('function-changed', () => {
-        const tab = getCurrentTabData();
-        const method_id = tab.method_name;
+    document.addEventListener('function-changed', (e) => {
+        const method_id = e.detail?.method_id;
         const request_id = state.activeRequests[method_id];
         if (state.activeRequests[method_id]) {
             delete state.activeRequests[method_id];

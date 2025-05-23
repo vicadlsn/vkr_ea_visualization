@@ -99,15 +99,20 @@ function setInput(inputElement, valid, errorElement, errMsg = '') {
 }
 
 function handleFunctionChange(inputElement, selectElement, functionErrorElement) {
+    const tabData = getCurrentTabData();
     const data = getFunctionData(inputElement.value);
     if (data) {
         setInput(inputElement, true, functionErrorElement);
-        getCurrentTabDataFunction().function = data;
-        getCurrentTabDataFunction().builtin = '';
+        tabData.currentFunction.function = data;
+        tabData.currentFunction.builtin = '';
         restoreStateFunctionChange();
         updateMethodInfo();
         updatePlot();
-        document.dispatchEvent(new Event('function-changed', { bubbles: true }));
+        document.dispatchEvent(
+            new CustomEvent('function-change', {
+                detail: { method_id: tabData.method_name },
+            }),
+        );
     } else {
         setInput(inputElement, false, functionErrorElement, funcInputErrMsg);
     }
