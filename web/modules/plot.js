@@ -15,7 +15,7 @@ const sceneBackgroundColor = 0xe6e7ee;
 
 function initConvergencePlot(graphDiv) {
     const layout = {
-        title: { text: 'График сходимости:' },
+        title: { text: 'График сходимости' },
 
         xaxis: { title: { text: 'Итерация' }, autorange: true },
         yaxis: { title: { text: 'Лучшее значение' }, autorange: true },
@@ -34,22 +34,11 @@ function initConvergencePlot(graphDiv) {
 }
 
 function updateConvergencePlot(graphDiv, trace) {
-    /* const layout = {
-        title: 'График сходимости',
-        xaxis: { title: 'Итерация', autorange: true },
-        yaxis: { title: 'Лучшее значение', autorange: true },
-        margin: { t: 100, r: 60, b: 100, l: 60 },
-    };*/
+    const newXValues = Array.from({ length: trace.length }, (_, i) => i + 1);
+    const newYValues = trace;
 
-    const y = {
-        y: trace,
-        mode: 'lines+markers',
-        line: { color: '#2d4cc8' },
-        name: { text: 'Лучшее значение' },
-    };
-
-    Plotly.deleteTraces(graphDiv, 0);
-    Plotly.addTraces(graphDiv, y);
+    Plotly.update(graphDiv, { x: [newXValues], y: [newYValues] });
+    console.log(newYValues);
 }
 
 function extendConvergencePlot(graphDiv, iteration, bestFitness) {
@@ -705,5 +694,6 @@ function addAxes(scene, xRange, yRange, zRange) {
     );
     scene.add(arrowZ);
     createLabel('Z', new THREE.Vector3(0, zRange[1] + 0.05 + arrowLength, -0.3));
+    arrowZ.scale.y *= Math.sign(surface.scale.z);
     arrowZ.scale.y *= Math.sign(surface.scale.z);
 }

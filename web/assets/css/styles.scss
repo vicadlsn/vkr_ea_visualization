@@ -172,7 +172,7 @@ input:not([type='range']):focus {
         inset -1px -1px 2px #ffffff73;
 }
 
-.invalid {
+.input-error {
     border: 1px solid #800202 !important;
     box-shadow:
         2px 2px 6px rgba(128, 2, 2, 0.2),
