@@ -10,7 +10,7 @@ const ALLOWED_FUNCTIONS = Set([
     :mod, :hypot
 ])
 
-const ALLOWED_VARIABLES = Set([:x, :y, :pi, :π])
+const ALLOWED_VARIABLES = Set([:x, :y, :pi, :π, :PI, :e, :E])
 
 function validate_expr(expr)
     if expr isa Symbol
@@ -23,13 +23,30 @@ function validate_expr(expr)
             if f isa Symbol && f in ALLOWED_FUNCTIONS
             #if f in ALLOWED_FUNCTIONS
                 return all(validate_expr, expr.args[2:end])
-                return false
             end
         else
             return false
         end
     else
         return false
+    end
+end
+
+function replace_constants(expr)
+    if expr isa Symbol
+        if expr == :e || expr == :E
+            return :ℯ
+        elseif expr == :PI
+            return :pi
+        else
+            return  expr
+        end
+    elseif expr isa Number
+        return expr
+    elseif expr isa Expr
+        return Expr(expr.head, map(replace_constants, expr.args)...)
+    else
+        return expr
     end
 end
 
@@ -43,7 +60,8 @@ function make_function_v2(f_expr::String)
     if !validate_expr(f_parsed)
         return nothing
     end
-    f = mk_function(:( (x, y) -> $((f_parsed)) ))
+    f_replaced = replace_constants(f_parsed)
+    f = mk_function(:( (x, y) -> $((f_replaced)) ))
     f_wrapped =  v -> f(v[1], v[2])
     return f_wrapped
 end
