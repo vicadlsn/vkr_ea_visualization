@@ -135,7 +135,7 @@ function evolve(population, situational, normative, num_elites, population_size,
 end
 
 # Главная функция CA
-function cultural_algorithm(ws, task_key, client_id, request_id, cancel_flags::Dict{String, Bool},  objective_function, dim, population_size, lower_bound, upper_bound, max_generations; num_elites=2, num_accepted=10,sigma=1)
+function cultural_algorithm(ws, task_key, client_id, request_id, cancel_flags::Dict{String, Bool},  objective_function, dim, lower_bound, upper_bound, max_generations, population_size; num_elites=2, num_accepted=10,sigma=1)
     # Валидация 
     if population_size < num_elites || num_accepted > population_size || dim != length(lower_bound) || dim != length(upper_bound)
         error("Неверные параметры: population_size=$population_size, num_elites=$num_elites, num_accepted=$num_accepted, dim=$dim, bounds_length=$(length(lower_bound))")
@@ -149,8 +149,10 @@ function cultural_algorithm(ws, task_key, client_id, request_id, cancel_flags::D
     # 2. Инициализация пространства убеждений
     situational, normative = init_belief_space(population, fitness, lower_bound, upper_bound, dim)
 
-    best_fitness = Inf
-    best_solution = nothing
+    best_fitness = situational.fitness
+    best_solution = situational.individual
+    current_best_fitness = situational.fitness
+    current_best_solution = situational.individual
     
     # Основной цикл
     for generation in 1:max_generations
@@ -171,10 +173,14 @@ function cultural_algorithm(ws, task_key, client_id, request_id, cancel_flags::D
         fitness = evaluate_population(population, objective_function)
         population, fitness = sort_population(population, fitness)
         
-        best_fitness = situational.fitness
-
+        current_best_fitness = situational.fitness
+        current_best_solution = situational.individual
+        if current_best_fitness < best_fitness
+            best_fitness = current_best_fitness
+            best_solution = current_best_solution
+        end
         # Отправка данных
-        send_optimization_data(ws, task_key, client_id, request_id, generation, best_fitness, situational.individual, population)
+        send_optimization_data(ws, task_key, client_id, request_id, generation, best_fitness, best_solution, current_best_fitness, current_best_solution, population)
     end
     
     return best_solution, best_fitness

@@ -182,19 +182,29 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
     upper_bounds = [Float64(p) for p in params["upper_bounds"]]
 
     @info "Starting optimization" method_id=method_id
-
+    @info "Parameters:" method_id=method_id params=JSON.json(params)
     best_solution, best_fitness = nothing, nothing
     try
         if method_id == "bbo"
             best_solution, best_fitness =  BBO.bbo(ws, method_id, client_id, request_id, cancel_flags, f_v, DIMENSION, params["islands_count"], lower_bounds, upper_bounds, params["iterations_count"], params["mutation_probability"], params["blending_rate"], params["num_elites"])
         elseif method_id == "cultural"
-            best_solution, best_fitness = CAEP.cultural_algorithm(ws, method_id, client_id, request_id, cancel_flags,  rlock, f_v, DIMENSION, params["population_size"], lower_bounds, upper_bounds, params["iterations_count"])
+            population_size = params["population_size"]
+            num_elites = params["num_elites"]
+            num_accepted=params["num_accepted"]
+            dim = DIMENSION
+            max_iters = params["iterations_count"]
+            
+            best_solution, best_fitness = CA.cultural_algorithm(
+                ws, method_id, client_id, request_id, cancel_flags,
+                f_v, dim, lower_bounds, upper_bounds, max_iters, population_size;
+                num_elites=num_elites, num_accepted=num_accepted
+            )
+
         elseif method_id == "harmony"
             dim = DIMENSION
             hms = params["hms"]
             max_iters = params["iterations_count"]
             mode = get(params, "mode", "canonical")
-            println(params)
             if mode == "canonical"
                 hmcr = params["hmcr"]
                 par = params["par"]
