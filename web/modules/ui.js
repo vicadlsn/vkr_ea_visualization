@@ -12,6 +12,11 @@ import {
 
 export { updatePlot, updateMethodInfo, getCurrentTabData };
 
+export function isFormValid() {
+    const invalidInputs = document.querySelectorAll('.form-input-error');
+    return invalidInputs.length === 0;
+}
+
 const funcInputErrMsg = 'Ошибка ввода функции.';
 const info = document.getElementById('methodInfoContent');
 const convergencePlotDiv = document.getElementById('convergencePlot');
@@ -82,11 +87,11 @@ function updatePlot() {
 
 function setInput(inputElement, valid, errorElement, errMsg = '') {
     if (valid) {
-        inputElement.classList.remove('input-error');
+        inputElement.classList.remove('form-input-error');
         errorElement.textContent = '';
         errorElement.style.display = 'none';
     } else {
-        inputElement.classList.add('input-error');
+        inputElement.classList.add('form-input-error');
 
         errorElement.textContent = errMsg;
         errorElement.style.display = 'block';
@@ -102,37 +107,51 @@ function handleFunctionChange(inputElement, selectElement, functionErrorElement)
         restoreStateFunctionChange();
         updateMethodInfo();
         updatePlot();
+        document.dispatchEvent(new Event('function-changed', { bubbles: true }));
     } else {
         setInput(inputElement, false, functionErrorElement, funcInputErrMsg);
     }
     selectElement.selectedIndex = 0;
 }
 
+const functionInput = document.getElementById('functionInput');
+const functionErrorElement = document.getElementById('functionError');
+const functionSelectBuiltin = document.getElementById('functionSelectBuiltin');
+const xRangeMinInput = document.getElementById('xRangeMin');
+const xRangeMaxInput = document.getElementById('xRangeMax');
+const yRangeMinInput = document.getElementById('yRangeMin');
+const yRangeMaxInput = document.getElementById('yRangeMax');
+const resolutionInput = document.getElementById('resolutionInput');
+const pointSizeInput = document.getElementById('pointSizeInput');
+const aspectratioXInput = document.getElementById('aspectratioXInput');
+const aspectratioYInput = document.getElementById('aspectratioYInput');
+const aspectratioZInput = document.getElementById('aspectratioZInput');
+const iterationsCountInput = document.getElementById('iterationsCountInput');
+const iterationsCountInputErrorDiv = document.getElementById('iterationsCountInputErrorDiv');
+
 function updateSettingsUI() {
     const tabData = getCurrentTabData();
-    document.getElementById('functionSelectBuiltin').value = tabData.currentFunction.builtin;
+    functionSelectBuiltin.value = tabData.currentFunction.builtin;
     /*document.getElementById("showGrid").checked =
         tabData.plotSettings.showGrid;*/
-
     // Параметры графика
-    document.getElementById('resolutionInput').value = tabData.plotSettings.resolution;
+    resolutionInput.value = tabData.plotSettings.resolution;
     /*document.getElementById("showPopulation").checked =
         tabData.plotSettings.showPopulation;*/
     /*document.getElementById("equalScale").checked =
         tabData.plotSettings.equalScale;*/
-    document.getElementById('pointSizeInput').value = tabData.plotSettings.pointSize;
-    document.getElementById('aspectratioXInput').value = tabData.plotSettings.aspectratioX;
-    document.getElementById('aspectratioYInput').value = tabData.plotSettings.aspectratioY;
-    document.getElementById('aspectratioZInput').value = tabData.plotSettings.aspectratioZ;
+    pointSizeInput.value = tabData.plotSettings.pointSize;
+    aspectratioXInput.value = tabData.plotSettings.aspectratioX;
+    aspectratioYInput.value = tabData.plotSettings.aspectratioY;
+    aspectratioZInput.value = tabData.plotSettings.aspectratioZ;
 
     // Общие параметры метода
-    document.getElementById('functionInput').value = tabData.currentFunction.function.original;
-    document.getElementById('xRangeMin').value = tabData.currentFunction.boundsX[0];
-    document.getElementById('xRangeMax').value = tabData.currentFunction.boundsX[1];
-    document.getElementById('yRangeMin').value = tabData.currentFunction.boundsY[0];
-    document.getElementById('yRangeMax').value = tabData.currentFunction.boundsY[1];
-    //document.getElementById('populationSizeInput').value = tabData.population_size;
-    document.getElementById('iterationsCountInput').value = tabData.iterations_count;
+    functionInput.value = tabData.currentFunction.function.original;
+    xRangeMinInput.value = tabData.currentFunction.boundsX[0];
+    xRangeMaxInput.value = tabData.currentFunction.boundsX[1];
+    yRangeMinInput.value = tabData.currentFunction.boundsY[0];
+    yRangeMaxInput.value = tabData.currentFunction.boundsY[1];
+    iterationsCountInput.value = tabData.iterations_count;
 }
 
 function setupTabs() {
@@ -180,27 +199,34 @@ function setupTabs() {
         updatePlot();
     }
 
-    bboTabButton.addEventListener('click', () => activateTab(METHOD_NAMES.bbo));
-    culturalTabButton.addEventListener('click', () => activateTab(METHOD_NAMES.cultural));
-    harmonyTabButton.addEventListener('click', () => activateTab(METHOD_NAMES.harmony));
+    bboTabButton.addEventListener('click', (e) => {
+        if (!isFormValid()) {
+            e.preventDefault();
+            alert('Пожалуйста, исправьте ошибки в вводе.');
+            return;
+        }
+        activateTab(METHOD_NAMES.bbo);
+    });
+    culturalTabButton.addEventListener('click', (e) => {
+        if (!isFormValid()) {
+            e.preventDefault();
+            alert('Пожалуйста, исправьте данные на текущей вкладке.');
+            return;
+        }
+        activateTab(METHOD_NAMES.cultural);
+    });
+    harmonyTabButton.addEventListener('click', (e) => {
+        if (!isFormValid()) {
+            e.preventDefault();
+            alert('Пожалуйста, исправьте данные на текущей вкладке.');
+            return;
+        }
+        activateTab(METHOD_NAMES.harmony);
+    });
 }
 
 function setupEventListeners() {
-    const functionInput = document.getElementById('functionInput');
     functionInput.value = getCurrentTabDataFunction().function.original;
-
-    const functionErrorElement = document.getElementById('functionError');
-    const functionSelectBuiltin = document.getElementById('functionSelectBuiltin');
-
-    const xRangeMin = document.getElementById('xRangeMin');
-    const xRangeMax = document.getElementById('xRangeMax');
-    const yRangeMin = document.getElementById('yRangeMin');
-    const yRangeMax = document.getElementById('yRangeMax');
-    const resolution = document.getElementById('resolutionInput');
-    const pointSize = document.getElementById('pointSizeInput');
-    const aspectratioX = document.getElementById('aspectratioXInput');
-    const aspectratioY = document.getElementById('aspectratioYInput');
-    const aspectratioZ = document.getElementById('aspectratioZInput');
 
     functionSelectBuiltin.addEventListener('change', (event) => {
         const target = event.target;
@@ -210,10 +236,10 @@ function setupEventListeners() {
         functionInput.value = builtin.original;
         setInput(functionInput, true, functionErrorElement);
 
-        xRangeMin.value = String(builtin.boundsX[0]);
-        xRangeMax.value = String(builtin.boundsX[1]);
-        yRangeMin.value = String(builtin.boundsY[0]);
-        yRangeMax.value = String(builtin.boundsY[1]);
+        xRangeMinInput.value = String(builtin.boundsX[0]);
+        xRangeMaxInput.value = String(builtin.boundsX[1]);
+        yRangeMinInput.value = String(builtin.boundsY[0]);
+        yRangeMaxInput.value = String(builtin.boundsY[1]);
 
         curFunc.function = getFunctionData(functionInput.value);
         curFunc.boundsX = [...builtin.boundsX];
@@ -224,9 +250,9 @@ function setupEventListeners() {
         tabData.plotSettings.aspectratioX = builtin.zoom[0];
         tabData.plotSettings.aspectratioY = builtin.zoom[1];
         tabData.plotSettings.aspectratioZ = builtin.zoom[2];
-        aspectratioX.value = tabData.plotSettings.aspectratioX;
-        aspectratioY.value = tabData.plotSettings.aspectratioY;
-        aspectratioZ.value = tabData.plotSettings.aspectratioZ;
+        aspectratioXInput.value = tabData.plotSettings.aspectratioX;
+        aspectratioYInput.value = tabData.plotSettings.aspectratioY;
+        aspectratioZInput.value = tabData.plotSettings.aspectratioZ;
 
         restoreStateFunctionChange();
         updateMethodInfo();
@@ -237,57 +263,93 @@ function setupEventListeners() {
         handleFunctionChange(functionInput, functionSelectBuiltin, functionErrorElement),
     );
 
-    xRangeMin.addEventListener('change', () => {
-        getCurrentTabDataFunction().boundsX[0] = parseFloat(xRangeMin.value);
+    xRangeMinInput.addEventListener('change', () => {
+        getCurrentTabDataFunction().boundsX[0] = parseFloat(xRangeMinInput.value);
         updatePlot();
     });
-    xRangeMax.addEventListener('change', () => {
-        getCurrentTabDataFunction().boundsX[1] = parseFloat(xRangeMax.value);
+    xRangeMaxInput.addEventListener('change', () => {
+        getCurrentTabDataFunction().boundsX[1] = parseFloat(xRangeMaxInput.value);
         updatePlot();
     });
-    yRangeMin.addEventListener('change', () => {
-        getCurrentTabDataFunction().boundsY[0] = parseFloat(yRangeMin.value);
+    yRangeMinInput.addEventListener('change', () => {
+        getCurrentTabDataFunction().boundsY[0] = parseFloat(yRangeMinInput.value);
         updatePlot();
     });
-    yRangeMax.addEventListener('change', () => {
-        getCurrentTabDataFunction().boundsY[1] = parseFloat(yRangeMax.value);
+    yRangeMaxInput.addEventListener('change', () => {
+        getCurrentTabDataFunction().boundsY[1] = parseFloat(yRangeMaxInput.value);
         updatePlot();
     });
 
     const tabData = getCurrentTabData();
-    resolution.value = tabData.plotSettings.resolution;
-    resolution.addEventListener('change', () => {
-        const val = parseInt(resolution.value);
+    resolutionInput.value = tabData.plotSettings.resolution;
+    resolutionInput.addEventListener('change', () => {
+        const val = parseInt(resolutionInput.value);
         if (val && val > 0) {
             getCurrentTabData().plotSettings.resolution = val;
         }
         updatePlot();
     });
 
-    pointSize.value = tabData.pointSize;
-    pointSize.addEventListener('input', () => {
-        const val = parseFloat(pointSize.value);
+    pointSizeInput.value = tabData.pointSize;
+    pointSizeInput.addEventListener('input', () => {
+        const val = parseFloat(pointSizeInput.value);
         if (val && val > 0) {
             getCurrentTabData().plotSettings.pointSize = val;
         }
         updatePlot();
     });
 
-    aspectratioX.value = tabData.plotSettings.aspectratioX;
-    aspectratioY.value = tabData.plotSettings.aspectratioY;
-    aspectratioZ.value = tabData.plotSettings.aspectratioZ;
+    aspectratioXInput.value = tabData.plotSettings.aspectratioX;
+    aspectratioYInput.value = tabData.plotSettings.aspectratioY;
+    aspectratioZInput.value = tabData.plotSettings.aspectratioZ;
 
-    aspectratioX.addEventListener('change', () => {
-        getCurrentTabData().plotSettings.aspectratioX = parseFloat(aspectratioX.value);
+    aspectratioXInput.addEventListener('change', () => {
+        getCurrentTabData().plotSettings.aspectratioX = parseFloat(aspectratioXInput.value);
         updatePlot();
     });
-    aspectratioY.addEventListener('change', () => {
-        getCurrentTabData().plotSettings.aspectratioY = parseFloat(aspectratioY.value);
+    aspectratioYInput.addEventListener('change', () => {
+        getCurrentTabData().plotSettings.aspectratioY = parseFloat(aspectratioYInput.value);
         updatePlot();
     });
-    aspectratioZ.addEventListener('change', () => {
-        getCurrentTabData().plotSettings.aspectratioZ = parseFloat(aspectratioZ.value);
+    aspectratioZInput.addEventListener('change', () => {
+        getCurrentTabData().plotSettings.aspectratioZ = parseFloat(aspectratioZInput.value);
         updatePlot();
+    });
+
+    const copyDataButton = document.getElementById('copyData');
+    const pasteDataButton = document.getElementById('pasteData');
+
+    copyDataButton.addEventListener('click', () => {
+        const tabData = getCurrentTabData();
+        if (!state.copied) state.copied = {};
+        state.copied.function = structuredClone(tabData.currentFunction);
+        state.copied.iterations_count = tabData.iterations_count;
+        state.copied;
+    });
+    pasteDataButton.addEventListener('click', () => {
+        if (
+            state.copied &&
+            state.copied.function &&
+            typeof state.copied.iterations_count === 'number'
+        ) {
+            const copiedFunction = state.copied.function;
+
+            functionInput.value = copiedFunction.function.original || '';
+            functionSelectBuiltin.value = copiedFunction.builtin || '';
+            xRangeMinInput.value = copiedFunction.boundsX?.[0] ?? '';
+            xRangeMaxInput.value = copiedFunction.boundsX?.[1] ?? '';
+            yRangeMinInput.value = copiedFunction.boundsY?.[0] ?? '';
+            yRangeMaxInput.value = copiedFunction.boundsY?.[1] ?? '';
+            iterationsCountInput.value = state.copied.iterations_count;
+
+            functionInput.dispatchEvent(new Event('change', { bubbles: true }));
+            functionSelectBuiltin.dispatchEvent(new Event('change', { bubbles: true }));
+            xRangeMinInput.dispatchEvent(new Event('change', { bubbles: true }));
+            xRangeMaxInput.dispatchEvent(new Event('change', { bubbles: true }));
+            yRangeMinInput.dispatchEvent(new Event('change', { bubbles: true }));
+            yRangeMaxInput.dispatchEvent(new Event('change', { bubbles: true }));
+            iterationsCountInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
     });
 }
 
@@ -311,14 +373,20 @@ function bindNumericInput(
 }
 
 function setupAlgorithmParams() {
-    const iterationsInput = document.getElementById('iterationsCountInput');
-
     function setupGeneralParams() {
-        iterationsInput.value = state.tabsData[METHOD_NAMES.bbo].iterations_count;
-        iterationsInput.addEventListener('change', () => {
-            const val = parseInt(iterationsInput.value);
+        iterationsCountInput.value = state.tabsData[METHOD_NAMES.bbo].iterations_count;
+        iterationsCountInput.addEventListener('change', () => {
+            const val = parseInt(iterationsCountInput.value);
             if (Number.isInteger(val) && val > 0) {
                 state.tabsData[state.currentTab].iterations_count = val;
+                setInput(iterationsCountInput, true, iterationsCountInputErrorDiv);
+            } else {
+                setInput(
+                    iterationsCountInput,
+                    false,
+                    iterationsCountInputErrorDiv,
+                    'Число итераций должно быть целым и больше 0.',
+                );
             }
         });
     }
@@ -431,8 +499,8 @@ function setupAlgorithmParams() {
     }
 
     // --- Cultural ---
-    const caCount = document.getElementById('ca_count');
-    const caCountErrorDiv = document.getElementById('ca_count_error');
+    const caPopulationSize = document.getElementById('ca_population_size');
+    const caPopulationSizeErrorDiv = document.getElementById('ca_population_size_error');
     const caNumElites = document.getElementById('ca_num_elites');
     const caNumAccepted = document.getElementById('ca_num_accepted');
     const caNumElitesErrorDiv = document.getElementById('ca_num_elites_error');
@@ -442,12 +510,12 @@ function setupAlgorithmParams() {
         const culturalState = state.tabsData[METHOD_NAMES.cultural];
         const params = culturalState.params;
 
-        caCount.value = params.count;
+        caPopulationSize.value = params.population_size;
         caNumElites.value = params.num_elites;
         caNumAccepted.value = params.num_accepted;
 
         function validateCAFields(source) {
-            const count = parseInt(caCount.value);
+            const count = parseInt(caPopulationSize.value);
             const elites = parseInt(caNumElites.value);
             const accepted = parseInt(caNumAccepted.value);
 
@@ -457,9 +525,9 @@ function setupAlgorithmParams() {
             if (!Number.isInteger(count) || count <= 0) {
                 if (source === 'count') {
                     setInput(
-                        caCount,
+                        caPopulationSize,
                         false,
-                        caCountErrorDiv,
+                        caPopulationSizeErrorDiv,
                         'Число индивидов должно быть положительным целым числом',
                     );
                 }
@@ -470,15 +538,15 @@ function setupAlgorithmParams() {
             ) {
                 if (source === 'count') {
                     setInput(
-                        caCount,
+                        caPopulationSize,
                         false,
-                        caCountErrorDiv,
+                        caPopulationSizeErrorDiv,
                         'Число индивидов должно быть не меньше элитных и принимаемых особей.',
                     );
                 }
                 valid = false;
             } else {
-                setInput(caCount, true, caCountErrorDiv);
+                setInput(caPopulationSize, true, caPopulationSizeErrorDiv);
             }
 
             // Проверка элитных особей
@@ -512,19 +580,19 @@ function setupAlgorithmParams() {
             }
 
             if (valid) {
-                params.count = count;
+                params.population_size = count;
                 params.num_elites = elites;
                 params.num_accepted = accepted;
             }
         }
 
-        caCount.addEventListener('change', () => validateCAFields('count'));
+        caPopulationSize.addEventListener('change', () => validateCAFields('count'));
         caNumElites.addEventListener('change', () => validateCAFields('elites'));
         caNumAccepted.addEventListener('change', () => validateCAFields('accepted'));
     }
 
-    const caepCount = document.getElementById('caep_count');
-    const caepCountErrorDiv = document.getElementById('caep_count_error');
+    const caepPopulationSize = document.getElementById('caep_population_size');
+    const caepPopulationSizeErrorDiv = document.getElementById('caep_population_size_error');
     //const caepNumElites = document.getElementById('caep_num_elites');
     const caepNumAccepted = document.getElementById('caep_num_accepted');
     // const caepNumElitesErrorDiv = document.getElementById('caep_num_elites_error');
@@ -533,11 +601,11 @@ function setupAlgorithmParams() {
     function setupCAEPInputs() {
         const params = state.tabsData[METHOD_NAMES.caep].params;
 
-        caepCount.value = params.count;
+        caepPopulationSize.value = params.population_size;
         caepNumAccepted.value = params.num_accepted;
 
         function validateCAEPFields(source) {
-            const count = parseInt(caepCount.value);
+            const count = parseInt(caepPopulationSize.value);
             const accepted = parseInt(caepNumAccepted.value);
 
             let valid = true;
@@ -546,9 +614,9 @@ function setupAlgorithmParams() {
             if (!Number.isInteger(count) || count <= 0) {
                 if (source === 'count') {
                     setInput(
-                        caepCount,
+                        caepPopulationSize,
                         false,
-                        caepCountErrorDiv,
+                        caepPopulationSizeErrorDiv,
                         'Число индивидов должно быть положительным целым числом',
                     );
                 }
@@ -556,15 +624,15 @@ function setupAlgorithmParams() {
             } else if (Number.isInteger(accepted) && accepted > count) {
                 if (source === 'count') {
                     setInput(
-                        caepCount,
+                        caepPopulationSize,
                         false,
-                        caepCountErrorDiv,
+                        caepPopulationSizeErrorDiv,
                         'Число индивидов должно быть не меньше числа принимаемых особей',
                     );
                 }
                 valid = false;
             } else {
-                setInput(caepCount, true, caepCountErrorDiv);
+                setInput(caepPopulationSize, true, caepPopulationSizeErrorDiv);
             }
 
             // Проверка принимаемых особей
@@ -583,12 +651,12 @@ function setupAlgorithmParams() {
             }
 
             if (valid) {
-                params.count = count;
+                params.population_size = count;
                 params.num_accepted = accepted;
             }
         }
 
-        caepCount.addEventListener('change', () => validateCAEPFields('count'));
+        caepPopulationSize.addEventListener('change', () => validateCAEPFields('count'));
         caepNumAccepted.addEventListener('change', () => validateCAEPFields('accepted'));
     }
 

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { initUI, updateMethodInfo } from './ui.js';
+import { initUI, updateMethodInfo, isFormValid } from './ui.js';
 import { connectWebsocket } from './websocket.js';
 import { state, getCurrentTabData } from './state.js';
 import { addPoints, updateConvergencePlot } from './plot.js';
@@ -17,10 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const stopButton = document.getElementById('stopOptimization');
 
     startButton.addEventListener('click', (e) => {
-        function isFormValid() {
-            const invalidInputs = document.querySelectorAll('.input-error');
-            return invalidInputs.length === 0;
-        }
         if (!isFormValid()) {
             e.preventDefault();
             alert('Пожалуйста, исправьте ошибки перед отправкой.');
@@ -30,7 +26,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     stopButton.addEventListener('click', () => {
-        const method_id = state.currentTab;
+        const tab = getCurrentTabData();
+        const method_id = tab.method_name;
         const request_id = state.activeRequests[method_id];
 
         sendMessage({
@@ -41,6 +38,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.addEventListener('got-websocket-message', handleWebsocketMessage);
+    document.addEventListener('function-changed', () => {
+        const tab = getCurrentTabData();
+        const method_id = tab.method_name;
+        const request_id = state.activeRequests[method_id];
+        if (state.activeRequests[method_id]) {
+            delete state.activeRequests[method_id];
+        }
+        sendMessage({
+            action: 'stop',
+            request_id: request_id,
+            method_id: method_id,
+        });
+    });
 });
 
 function startOptimization() {

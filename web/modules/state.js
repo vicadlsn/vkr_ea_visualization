@@ -30,6 +30,8 @@ export const state = {
         //aspectratioZ: 1,
     },
 
+    copied: null,
+
     tabsData: {
         bbo: {
             method_name: METHOD_NAMES.bbo,
@@ -62,7 +64,7 @@ export const state = {
         },
         cultural: {
             method_name: METHOD_NAMES.cultural,
-            params: { count: 50, num_elites: 2, num_accepted: 10 },
+            params: { population_size: 50, num_elites: 2, num_accepted: 10 },
             population: [],
             best_solution: undefined,
             best_fitness: undefined,
@@ -87,7 +89,7 @@ export const state = {
         },
         caep: {
             method_name: METHOD_NAMES.cultural,
-            params: { count: 50, num_elites: 2, num_accepted: 10 },
+            params: { population_size: 50, num_elites: 2, num_accepted: 10 },
             population: [],
             best_solution: undefined,
             best_fitness: undefined,

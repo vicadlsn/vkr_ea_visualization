@@ -42,9 +42,15 @@
                 </div>
 
                 <label for="iterationsCountInput">Число итераций:</label>
-                <input type="number" id="iterationsCountInput" value="10" min="0">
+                <input type="number" id="iterationsCountInput" placeholder="10" min="0" step="1">
+                <div class="errorDiv" id="iterationsCountInputErrorDiv"></div>
 
-                <div id="optimizationControls" style="display: flex; gap: 10px;">
+                <div id="dataBufferControls" style="display: flex; gap: 10px;">
+                    <button id="copyData">Скопировать параметры</button>
+                    <button id="pasteData">Вставить параметры</button>
+                </div>
+
+                <div id="optimizationControls" style="display: flex; flex-direction: column; margin:0px;">
                     <button id="startOptimization">Оптимизация</button>
                     <button id="stopOptimization">Остановить</button>
                 </div>
@@ -75,9 +81,9 @@
                 </div>
 
                 <div id="cultural_algorithm_tab" class="tab-content">
-                    <label for="ca_count">Число особей:</label>
-                    <input type="number" id="ca_count" placeholder="50" min="1" step="1">
-                    <div class="errorDiv" id="ca_count_error"></div>
+                    <label for="ca_population_size">Число особей:</label>
+                    <input type="number" id="ca_population_size" placeholder="50" min="1" step="1">
+                    <div class="errorDiv" id="ca_population_size_error"></div>
 
                     <label for="ca_num_elites">Число элитных индивидов:</label>
                     <input type="number" id="ca_num_elites" placeholder="2" min="0" step="1">
@@ -89,9 +95,9 @@
                 </div>
 
                 <div id="caep_algorithm_tab" class="tab-content">
-                    <label for="caep_count">Число особей:</label>
-                    <input type="number" id="caep_count" value="50" min="1" step="1">
-                    <div class="errorDiv" id="caep_count_error"></div>
+                    <label for="caep_population_size">Число особей:</label>
+                    <input type="number" id="caep_population_size" value="50" min="1" step="1">
+                    <div class="errorDiv" id="caep_population_size_error"></div>
 
                     <label for="caep_num_accepted">Число принятых индивидов:</label>
                     <input type="number" id="caep_num_accepted" placeholder="10" min="0" step="1">

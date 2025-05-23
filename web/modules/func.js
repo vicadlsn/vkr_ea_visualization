@@ -52,6 +52,14 @@ builtinFunctions['levy'] = {
     name: 'Функция Леви',
 };
 
+builtinFunctions['schaffer'] = {
+    original: '0.5-(sin(sqrt(x^2+y^2))^2-0.5)/(1+0.001(x^2+y^2))^2',
+    boundsX: [-10, 10],
+    boundsY: [-10, 10],
+    zoom: [1, 1, 1],
+    name: 'Schaffer function',
+};
+
 const allowedFunctions = new Set([
     /* основные математические функции */
     'sqrt',
