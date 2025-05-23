@@ -146,7 +146,7 @@ input:not([type=range]):focus {
   box-shadow: inset 1px 1px 2px #babecc, inset -1px -1px 2px rgba(255, 255, 255, 0.4509803922);
 }
 
-.input-error {
+.invalid {
   border: 1px solid #800202 !important;
   box-shadow: 2px 2px 6px rgba(128, 2, 2, 0.2), -2px -2px 6px rgba(128, 2, 2, 0.2) !important;
 }
@@ -334,4 +334,4 @@ button:active,
   white-space: nowrap;
 }
 
-/*# sourceMappingURL=styles.css.map */
+/*# sourceMappingURL=styles.cs.map */

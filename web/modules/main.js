@@ -16,7 +16,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const startButton = document.getElementById('startOptimization');
     const stopButton = document.getElementById('stopOptimization');
 
-    startButton.addEventListener('click', startOptimization);
+    startButton.addEventListener('click', (e) => {
+        function isFormValid() {
+            const invalidInputs = document.querySelectorAll('.input-error');
+            return invalidInputs.length === 0;
+        }
+        if (!isFormValid()) {
+            e.preventDefault();
+            alert('Пожалуйста, исправьте ошибки перед отправкой.');
+            return;
+        }
+        startOptimization();
+    });
 
     stopButton.addEventListener('click', () => {
         const method_id = state.currentTab;
@@ -39,20 +50,20 @@ function startOptimization() {
     state.activeRequests[method_id] = request_id;
     tab.history = [];
     tab.total_iterations = tab.iterations_count;
+    const boundsX = tab.currentFunction.boundsX.slice().sort((a, b) => a - b);
+    const boundsY = tab.currentFunction.boundsY.slice().sort((a, b) => a - b);
+
     const params = {
         action: 'start',
         request_id: request_id,
         method_id: method_id,
         function: tab.currentFunction.function.original,
-        lower_bounds: [tab.currentFunction.boundsX[0], tab.currentFunction.boundsY[0]],
-        upper_bounds: [tab.currentFunction.boundsX[1], tab.currentFunction.boundsY[1]],
-        // boundsX: tab.currentFunction.boundsX,
-        // boundsY: tab.currentFunction.boundsY,
-        //method: state.currentTab,
+        lower_bounds: [boundsX[0], boundsY[0]],
+        upper_bounds: [boundsX[1], boundsY[1]],
         iterations_count: tab.iterations_count,
-        population_size: tab.population_size,
         params: tab.params,
     };
+
     console.log(tab.params);
     sendMessage(params);
 }
@@ -94,8 +105,10 @@ function handleWebsocketMessage(event) {
             tab.population = data['population'];
             tab.best_solution = data['best_solution'];
             tab.best_fitness = data['best_fitness'];
+            tab.current_best_solution = data['current_best_solution'];
+            tab.current_best_fitness = data['current_best_fitness'];
             tab.iteration = data['iteration'];
-            tab.history.push(data['best_fitness']);
+            tab.history.push(data['current_best_fitness']);
             if (method_id === state.currentTab) {
                 updateMethodInfo();
                 if (state.plotSettings.showSurface) {
