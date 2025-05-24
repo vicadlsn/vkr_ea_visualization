@@ -13,51 +13,37 @@ include("./ws.jl")
 
 const DIMENSION = 2
 
-function cleanup_tasks(optimizations::Dict{String, Task}, cancel_flags::Dict{String, Bool}, rlock::ReentrantLock)
-    #lock(rlock) do
-        for (key, task) in optimizations
-            cancel_flags[key] = true
-            wait(task)
-        end
-    #end
+function cleanup_task(task::Task, cancel_flag::Bool)
+    if !cancel_flag
+        cancel_flag = true
+        wait(task)
+    end
 end
 
 function handle_ws_client(http::HTTP.Stream)
-    optimizations = Dict{String, Task}()
-    cancel_flags = Dict{String, Bool}()
-    rlock = ReentrantLock()
-    send_channel = Channel{String}(100)
-
     client_id = string(uuid4())
     @info "Handling WebSocket client" client_id=client_id
+
+    # Хранилище для одной задачи на соединение
+    optimization_task = Ref{Union{Task, Nothing}}(nothing)
+    cancel_flag = Ref{Bool}(false)
 
     try
         HTTP.WebSockets.upgrade(http) do ws
             @info "New WebSocket connection established" client_id=client_id
-
-            # Отдельный таск отправки сообщений
-            @async begin
-                for msg in send_channel
-                    try
-                        send(ws, msg)
-                    catch e
-                        @error "Ошибка отправки в WebSocket: $e"
-                        break
-                    end
-                end
-            end
-
-            handle_ws_messages(ws, client_id, optimizations, cancel_flags, rlock)
+            handle_ws_messages(ws, client_id, optimization_task, cancel_flag)
         end
     catch e
         if isa(e, InterruptException)
             @warn "WebSocket interrupted: InterruptException" client_id=client_id
         else
-            @error "Websocket error: $e" client_id=client_id
+            @error "WebSocket error: $e" client_id=client_id
         end
     finally
-        cleanup_tasks(optimizations, cancel_flags, rlock)
-        @info "Websocket closed" client_id=client_id
+        if !isnothing(optimization_task[])
+            cleanup_task(optimization_task[], cancel_flag[])
+        end
+        @info "WebSocket connection closed" client_id=client_id
     end
 end
 
@@ -70,15 +56,15 @@ function send_error(ws, client_id, request_id, message)
             "message" => message
         )))
     catch e
-        @error "Failed to send error message: $e" client_id=cliend_id
+        @error "Failed to send error message: $e" client_id=client_id
     end
 end
 
-function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimizations::Dict{String, Task}, cancel_flags::Dict{String, Bool}, rlock::ReentrantLock)
+function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimization_task::Ref{Union{Task, Nothing}}, cancel_flag::Ref{Bool})
     for msg in ws
         @debug "Received message: $msg"
         data = try
-            data = JSON.parse(String(msg))
+            JSON.parse(String(msg))
         catch e
             @error "Error parsing JSON: $e"
             send_error(ws, client_id, nothing, "Invalid JSON")
@@ -87,7 +73,7 @@ function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimizations
 
         if !haskey(data, "action")
             @error "Missing action field" data=data
-            send_error(ws, client_id, data["request_id"], "Missing action")
+            send_error(ws, client_id, get(data, "request_id", nothing), "Missing action")
             continue
         end
 
@@ -124,52 +110,48 @@ function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimizations
             params["upper_bounds"] = data["upper_bounds"]
             params["iterations_count"] = data["iterations_count"]
             
-            #lock(rlock) do
-                if haskey(optimizations, method_id)
-                    @info "Cancelling previous task" method_id=method_id
-                    cancel_flags[method_id] = true
-                    wait(optimizations[method_id])
-                end
+            if !isnothing(optimization_task[])
+                @info "Cancelling previous task" method_id=method_id
+                cancel_flag[] = true
+                wait(optimization_task[])
+            end
 
-                cancel_flags[method_id] = false
-                optimizations[method_id] = @async begin
-                    try
-                        send(ws, JSON.json(Dict(
-                            "action" => "start_ack",
-                            "client_id" => client_id,
-                            "request_id" => request_id,
-                            "method_id" => method_id,
-                            "status" => "ok"
-                        )))
-                        optimize(ws, f, method_id, client_id, request_id, params, cancel_flags, rlock)
-                    catch e
-                        @error "Optimization failed: $e" method_id=method_id
-                        send_error(ws, client_id, request_id, "Optimization error: $e")
-                    finally
-                        #lock(rlock) do
-                            delete!(optimizations, method_id)
-                            delete!(cancel_flags, method_id)
-                        #end
-                    end
-                end
-            #end
-        elseif data["action"] == "stop"
-            @info "Stop optimization request" client_id=client_id request_id=request_id method_id=method_id
-            #lock(rlock) do
-                if haskey(optimizations, method_id)
-                    cancel_flags[method_id] = true
-                    wait(optimizations[method_id])
+            cancel_flag[] = false
+            optimization_task[] = @async begin
+                try
                     send(ws, JSON.json(Dict(
-                        "action" => "stop_ack",
+                        "action" => "start_ack",
                         "client_id" => client_id,
                         "request_id" => request_id,
                         "method_id" => method_id,
                         "status" => "ok"
                     )))
-                else
-                    send_error(ws, client_id, request_id, "No active process")
+                    optimize(ws, f, method_id, client_id, request_id, params, cancel_flag)
+                catch e
+                    @error "Optimization failed: $e" method_id=method_id
+                    send_error(ws, client_id, request_id, "Optimization error: $e")
+                finally
+                    optimization_task[] = nothing
+                    cancel_flag[] = false
                 end
-            #end
+            end
+        elseif data["action"] == "stop"
+            @info "Stop optimization request" client_id=client_id request_id=request_id method_id=method_id
+            if !isnothing(optimization_task[])
+                cancel_flag[] = true
+                wait(optimization_task[])
+                send(ws, JSON.json(Dict(
+                    "action" => "stop_ack",
+                    "client_id" => client_id,
+                    "request_id" => request_id,
+                    "method_id" => method_id,
+                    "status" => "ok"
+                )))
+                optimization_task[] = nothing
+                cancel_flag[] = false
+            else
+                send_error(ws, client_id, request_id, "No active process")
+            end
         else
             @warn "Unknown action" action=data["action"]
             send_error(ws, client_id, request_id, "Unknown action")
@@ -195,7 +177,7 @@ function validate_start_params(data)
     return true
 end
 
-function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String, request_id::String, params::Dict{String, Any}, cancel_flags::Dict{String, Bool}, rlock::ReentrantLock)
+function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String, request_id::String, params::Dict{String, Any}, cancel_flag::Ref{Bool})
     lower_bounds = [Float64(p) for p in params["lower_bounds"]]
     upper_bounds = [Float64(p) for p in params["upper_bounds"]]
 
@@ -204,20 +186,23 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
     best_solution, best_fitness = nothing, nothing
     try
         if method_id == "bbo"
-            best_solution, best_fitness = BBO.bbo(ws, method_id, client_id, request_id, cancel_flags, f_v, DIMENSION, lower_bounds, upper_bounds, params["iterations_count"],params["islands_count"];  mutation_probability=params["mutation_probability"], blending_rate=params["blending_rate"], num_elites=params["num_elites"], send_func=send_optimization_data)
+            best_solution, best_fitness = BBO.bbo(
+                ws, method_id, client_id, request_id, cancel_flag, f_v, DIMENSION,
+                lower_bounds, upper_bounds, params["iterations_count"], params["islands_count"];
+                mutation_probability=params["mutation_probability"], blending_rate=params["blending_rate"],
+                num_elites=params["num_elites"], send_func=send_optimization_data
+            )
         elseif method_id == "cultural"
             population_size = params["population_size"]
             num_elites = params["num_elites"]
-            num_accepted=params["num_accepted"]
+            num_accepted = params["num_accepted"]
             dim = DIMENSION
             max_iters = params["iterations_count"]
-            
             best_solution, best_fitness = CA.cultural_algorithm(
-                ws, method_id, client_id, request_id, cancel_flags,
+                ws, method_id, client_id, request_id, cancel_flag,
                 f_v, dim, lower_bounds, upper_bounds, max_iters, population_size;
                 num_elites=num_elites, num_accepted=num_accepted, send_func=send_optimization_data
             )
-
         elseif method_id == "harmony"
             dim = DIMENSION
             hms = params["hms"]
@@ -228,18 +213,18 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
                 par = params["par"]
                 bw = params["bw"]
                 best_solution, best_fitness = HS.harmony_search(
-                    ws, method_id, client_id, request_id, cancel_flags,
+                    ws, method_id, client_id, request_id, cancel_flag,
                     f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
                     hmcr=hmcr, par=par, bw=bw, mode="canonical", send_func=send_optimization_data
                 )
             elseif mode == "adaptive"
                 best_solution, best_fitness = HS.harmony_search(
-                    ws, method_id, client_id, request_id, cancel_flags,
+                    ws, method_id, client_id, request_id, cancel_flag,
                     f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
                     mode="adaptive", send_func=send_optimization_data
                 )
             else
-                @error "Unknown HS mode" mode
+                @error "Unknown HS mode" mode=mode
                 send_error(ws, client_id, request_id, "Unknown Harmony Search mode: $mode")
                 return
             end
@@ -249,21 +234,18 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
             return
         end
         @info "Optimization completed" client_id=client_id request_id=request_id method_id=method_id best_solution=string(best_solution) best_fitness=best_fitness
-        # Отправка финального результата
-        #lock(rlock) do
-            if !haskey(cancel_flags, method_id) || !cancel_flags[method_id]
-                send(ws, JSON.json(Dict(
-                    "action" => "complete",
-                    "client_id" => client_id,
-                    "request_id" => request_id,
-                    "method_id" => method_id,
-                    "final_solution" => best_solution,
-                    "final_fitness" => best_fitness,
-                    "iterations" => params["iterations_count"]
-                )))
-                @info "Optimization completed" method_id=method_id
-            end
-        #end
+        if !cancel_flag[]
+            send(ws, JSON.json(Dict(
+                "action" => "complete",
+                "client_id" => client_id,
+                "request_id" => request_id,
+                "method_id" => method_id,
+                "final_solution" => best_solution,
+                "final_fitness" => best_fitness,
+                "iterations" => params["iterations_count"]
+            )))
+            @info "Optimization completed" method_id=method_id
+        end
     catch e
         @error "Optimization error: $e" client_id=client_id request_id=request_id method_id=method_id
         send_error(ws, client_id, request_id, "Optimization failed: $e")

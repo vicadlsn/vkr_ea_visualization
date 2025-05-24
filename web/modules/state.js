@@ -35,6 +35,7 @@ export const state = {
     tabsData: {
         bbo: {
             method_name: METHOD_NAMES.bbo,
+            currentStatus: '',
             params: {
                 islands_count: 50,
                 mutation_probability: 0.04,
@@ -64,6 +65,7 @@ export const state = {
         },
         cultural: {
             method_name: METHOD_NAMES.cultural,
+            currentStatus: '',
             params: { population_size: 50, num_elites: 2, num_accepted: 10 },
             population: [],
             best_solution: undefined,
@@ -87,8 +89,9 @@ export const state = {
                 aspectratioZ: 1,
             },
         },
-        caep: {
+        /*caep: {
             method_name: METHOD_NAMES.cultural,
+            currentStatus: "",
             params: { population_size: 50, num_elites: 2, num_accepted: 10 },
             population: [],
             best_solution: undefined,
@@ -111,9 +114,10 @@ export const state = {
                 aspectratioY: 1,
                 aspectratioZ: 1,
             },
-        },
+        },*/
         harmony: {
             method_name: METHOD_NAMES.harmony,
+            currentStatus: '',
             params: {
                 hms: 30,
                 hmcr: 0.9,

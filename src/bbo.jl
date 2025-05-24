@@ -45,7 +45,7 @@ function sort_population(population, fitness)
     return population[indices], fitness[indices]
 end
 
-function bbo(ws, task_key, client_id, request_id, cancel_flags::Dict{String, Bool}, objective_function, dim, lower_bound, upper_bound, max_generations, population_size; mutation_probability=0.04, blending_rate=0.1, num_elites=2, send_func=nothing)
+function bbo(ws, task_key, client_id, request_id, cancel_flag::Ref{Bool}, objective_function, dim, lower_bound, upper_bound, max_generations, population_size; mutation_probability=0.04, blending_rate=0.1, num_elites=2, send_func=nothing)
     # Инициализация популяции
     population = initialize_population(dim, population_size, lower_bound, upper_bound)
     fitness = evaluate_population(population, objective_function)
@@ -59,10 +59,10 @@ function bbo(ws, task_key, client_id, request_id, cancel_flags::Dict{String, Boo
     current_best_solution = population[1]
 
     for generation in 1:max_generations
-            if get(cancel_flags, task_key, false)
-                @info "BBO cancelled" client_id=client_id task_key=task_key
-                return best_solution, best_fitness
-            end
+        if cancel_flag[]
+            @info "BBO cancelled" client_id=client_id task_key=task_key
+            return best_solution, best_fitness
+        end
 
         # Вероятности эмиграции и иммиграции
         mu = [(population_size + 1 - i) / (population_size + 1) for i in 1:population_size]

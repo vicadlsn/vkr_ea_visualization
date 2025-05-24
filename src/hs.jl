@@ -76,7 +76,7 @@ function update_harmony_memory!(harmonies, fitness, new_harmony, new_fitness)
 end
 
 
-function harmony_search(ws, task_key, client_id, request_id, cancel_flags::Dict{String, Bool},
+function harmony_search(ws, task_key, client_id, request_id, cancel_flag::Ref{Bool},
                         objective_function, dim::Int, 
                         lower_bound::Vector{Float64}, upper_bound::Vector{Float64}, 
                         max_iterations::Int, hms::Int;
@@ -100,7 +100,7 @@ function harmony_search(ws, task_key, client_id, request_id, cancel_flags::Dict{
     best_solution = copy(harmonies[best_idx])
 
     for iteration in 1:max_iterations
-        if get(cancel_flags, task_key, false)
+        if cancel_flag[]
             @info "HS cancelled" client_id=client_id task_key=task_key
             return best_solution, best_fitness
         end

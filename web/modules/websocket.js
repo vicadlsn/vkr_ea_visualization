@@ -1,73 +1,46 @@
-export { connectWebsocket };
+export { createWebsocket };
 
-const RECONNECT_INTERVALS = [1000, 2000, 4000];
-const MAX_RECONNECT_ATTEMPTS = 3;
+//const appStatusText = document.getElementById('appState');
 
-const appStatusText = document.getElementById('appState');
-function connectWebsocket() {
-    let currentSocket = null;
+function createWebsocket(method_id, onOpen, onMessage, onError, onClose) {
+    //const ws = new WebSocket("ws://" + window.location.origin);
 
-    function connect() {
-        let reconnectAttempts = 0;
+    const ws = new WebSocket('ws://localhost:9000');
 
-        //currentSocket = new WebSocket("ws://" + window.location.origin);
-        currentSocket = new WebSocket('ws://localhost:9000');
+    ws.onopen = (e) => {
+        console.log('WebSocket opened for ${method_id}');
+        onOpen(e);
+    };
 
-        currentSocket.onopen = function () {
-            console.log('WebSocket connection established');
-            appStatusText.textContent = 'Соединение установлено';
-            reconnectAttempts = 0;
-        };
+    ws.onerror = (e) => {
+        console.error('WebSocket error for ${method_id}:', e);
+        onError(e);
+    };
 
-        currentSocket.onerror = (e) => {
-            console.error('WebSocket error:', e);
-            appStatusText.textContent = 'Ошибка соединения с сервером';
-        };
-
-        currentSocket.onmessage = function (event) {
-            try {
-                const data = JSON.parse(event.data);
-                document.dispatchEvent(
-                    new CustomEvent('got-websocket-message', {
-                        detail: { data: data },
-                    }),
-                );
-            } catch (err) {
-                console.error('Invalid JSON received:', event.data, err);
-            }
-        };
-
-        currentSocket.onclose = function () {
-            console.log('Соединение закрыто');
-            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-                const delay =
-                    RECONNECT_INTERVALS[reconnectAttempts] ||
-                    RECONNECT_INTERVALS[RECONNECT_INTERVALS.length - 1];
-                reconnectAttempts++;
-                appStatusText.textContent = `Соединение закрыто, переподключение...`;
-                setTimeout(connect, delay);
-            } else {
-                appStatusText.textContent = 'Не удалось переподключиться к серверу';
-            }
-        };
-    }
-
-    function sendMessage(params, callback) {
-        if (currentSocket && currentSocket.readyState === WebSocket.OPEN) {
-            try {
-                currentSocket.send(JSON.stringify(params));
-                console.log('Sent message:', params);
-                if (callback) callback();
-            } catch (e) {
-                console.error('Error sending message:', e);
-                appStatusText.textContent = 'Не удалось отправить сообщение';
-            }
-        } else {
-            console.error('WebSocket is not opened:');
-            appStatusText.textContent = 'Не удалось отправить сообщение: соединение не установлено';
+    ws.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            onMessage(data);
+        } catch (err) {
+            console.error('Invalid JSON:', event.data, err);
         }
-    }
+    };
 
-    connect();
-    return sendMessage;
+    ws.onclose = (e) => {
+        console.log(`WebSocket closed for ${method_id}`);
+        onClose(e);
+    };
+
+    return {
+        send: (params) => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(params));
+                console.log('Sent message:', params);
+            } else {
+                console.error(`WebSocket for ${method_id} not opened`);
+                // appStatusText.textContent = 'Соединение не установлено';
+            }
+        },
+        close: () => ws.close(),
+    };
 }

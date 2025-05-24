@@ -135,7 +135,7 @@ function evolve(population, situational, normative, num_elites, population_size,
 end
 
 # Главная функция CA
-function cultural_algorithm(ws, task_key, client_id, request_id, cancel_flags::Dict{String, Bool},  objective_function, dim, lower_bound, upper_bound, max_generations, population_size; num_elites=2, num_accepted=10,send_func=nothing,sigma=1,)
+function cultural_algorithm(ws, task_key, client_id, request_id, cancel_flag::Ref{Bool},  objective_function, dim, lower_bound, upper_bound, max_generations, population_size; num_elites=2, num_accepted=10,send_func=nothing,sigma=1,)
     # Валидация 
     if population_size < num_elites || num_accepted > population_size || dim != length(lower_bound) || dim != length(upper_bound)
         error("Неверные параметры: population_size=$population_size, num_elites=$num_elites, num_accepted=$num_accepted, dim=$dim, bounds_length=$(length(lower_bound))")
@@ -156,7 +156,7 @@ function cultural_algorithm(ws, task_key, client_id, request_id, cancel_flags::D
     
     # Основной цикл
     for generation in 1:max_generations
-        if get(cancel_flags, task_key, false)
+        if cancel_flag[]
             @info "Cultural Algorithm cancelled" client_id=client_id task_key=task_key
             return best_solution, best_fitness
         end

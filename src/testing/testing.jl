@@ -83,14 +83,14 @@ function test_algorithm(algorithm_func; func, dim=30, lower_bound=-5.0, upper_bo
     results = Float64[]
 
     for _ in 1:runs
-        cancel_flags = Dict{String, Bool}()  # пустой словарь, т.к. отмена не используется
+        cancel_flag =  Ref{Bool}(false)  # пустой словарь, т.к. отмена не используется
         ws = nothing  # вебсокет не нужен для теста
         task_key = "test"
         client_id = "offline"
         request_id = "local"
 
         # запускаем алгоритм
-        best_sol, best_fit = algorithm_func(ws, task_key, client_id, request_id, cancel_flags,
+        best_sol, best_fit = algorithm_func(ws, task_key, client_id, request_id, cancel_flag,
         func, dim, 
                                             fill(lower_bound, dim), fill(upper_bound, dim),
                                             max_generations,population_size; params...)

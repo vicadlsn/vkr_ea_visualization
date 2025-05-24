@@ -354,7 +354,8 @@ button:active,
 .active-button,
 .tabButton.active-button,
 .tabButton:first-child.active-button,
-#startOptimization:active {
+#startOptimization:active,
+#startOptimization:disabled {
     background-color: $accent-color;
     color: #fff;
     box-shadow: $box-shadow-inset-active;
