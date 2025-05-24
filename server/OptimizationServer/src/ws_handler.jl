@@ -1,15 +1,14 @@
+module WSHandler
+
 using HTTP
 using Sockets
 using JSON
 using Base.Threads
 using UUIDs
 
-include("./bbo.jl")
-include("./caep.jl")
-include("./ca.jl")
-include("./math.jl")
-include("./hs.jl")
-include("./ws.jl")
+using OptimizationAlgorithms, MathParser
+
+export handle_ws_client
 
 const DIMENSION = 2
 
@@ -36,12 +35,18 @@ function handle_ws_client(http::HTTP.Stream)
     catch e
         if isa(e, InterruptException)
             @warn "WebSocket interrupted: InterruptException" client_id=client_id
+            return  # После warn сразу выйти из try/catch, чтобы перейти в finally
         else
             @error "WebSocket error: $e" client_id=client_id
         end
     finally
         if !isnothing(optimization_task[])
             cleanup_task(optimization_task[], cancel_flag[])
+            try
+                wait(optimization_task[])  # Ждем завершения задачи
+            catch e
+                @warn "Error waiting for task: $e" client_id=client_id
+            end
         end
         @info "WebSocket connection closed" client_id=client_id
     end
@@ -56,11 +61,13 @@ function send_error(ws, client_id, request_id, message)
             "message" => message
         )))
     catch e
-        @error "Failed to send error message: $e" client_id=client_id
+        #@error "Failed to send error message: $e" client_id=client_id
+        error("Failed to send error message: $e")
     end
 end
 
 function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimization_task::Ref{Union{Task, Nothing}}, cancel_flag::Ref{Bool})
+    method_id = ""
     for msg in ws
         @debug "Received message: $msg"
         data = try
@@ -157,7 +164,7 @@ function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimization_
             send_error(ws, client_id, request_id, "Unknown action")
         end
     end
-    @info "WebSocket connection closed" client_id=client_id
+    @info "WebSocket connection closed" client_id=client_id method_id=method_id
 
 end
 
@@ -178,6 +185,32 @@ function validate_start_params(data)
 end
 
 function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String, request_id::String, params::Dict{String, Any}, cancel_flag::Ref{Bool})
+    function send_optimization_data_closure(iteration, best_fitness, best_solution, current_best_fitness, current_best_solution, population)
+        if ws === nothing || ws.writeclosed
+            @warn "WebSocket is closed. Skipping send" method_id=method_id
+            return
+        end
+    
+        try
+            data = JSON.json(Dict(
+                "action" => "iteration",
+                "client_id" => client_id,
+                "request_id" => request_id,
+                "method_id" => method_id,
+                "iteration" => iteration,
+                "population" => population,
+                "best_fitness" => best_fitness,
+                "best_solution" => best_solution,
+                "current_best_fitness" => current_best_fitness,
+                "current_best_solution" => current_best_solution
+            ))
+            HTTP.WebSockets.send(ws, data)
+            @debug "Sent data" method_id=method_id iteration=iteration
+        catch e
+            @error "Error sending iteration data: $e" method_id=method_id
+        end
+    end
+
     lower_bounds = [Float64(p) for p in params["lower_bounds"]]
     upper_bounds = [Float64(p) for p in params["upper_bounds"]]
 
@@ -186,11 +219,10 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
     best_solution, best_fitness = nothing, nothing
     try
         if method_id == "bbo"
-            best_solution, best_fitness = BBO.bbo(
-                ws, method_id, client_id, request_id, cancel_flag, f_v, DIMENSION,
+            best_solution, best_fitness = OptimizationAlgorithms.bbo(cancel_flag, f_v, DIMENSION,
                 lower_bounds, upper_bounds, params["iterations_count"], params["islands_count"];
                 mutation_probability=params["mutation_probability"], blending_rate=params["blending_rate"],
-                num_elites=params["num_elites"], send_func=send_optimization_data
+                num_elites=params["num_elites"], send_func=send_optimization_data_closure
             )
         elseif method_id == "cultural"
             population_size = params["population_size"]
@@ -198,10 +230,9 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
             num_accepted = params["num_accepted"]
             dim = DIMENSION
             max_iters = params["iterations_count"]
-            best_solution, best_fitness = CA.cultural_algorithm(
-                ws, method_id, client_id, request_id, cancel_flag,
+            best_solution, best_fitness = OptimizationAlgorithms.cultural_algorithm(cancel_flag,
                 f_v, dim, lower_bounds, upper_bounds, max_iters, population_size;
-                num_elites=num_elites, num_accepted=num_accepted, send_func=send_optimization_data
+                num_elites=num_elites, num_accepted=num_accepted, send_func=send_optimization_data_closure
             )
         elseif method_id == "harmony"
             dim = DIMENSION
@@ -212,16 +243,14 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
                 hmcr = params["hmcr"]
                 par = params["par"]
                 bw = params["bw"]
-                best_solution, best_fitness = HS.harmony_search(
-                    ws, method_id, client_id, request_id, cancel_flag,
+                best_solution, best_fitness = OptimizationAlgorithms.harmony_search(cancel_flag,
                     f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
                     hmcr=hmcr, par=par, bw=bw, mode="canonical", send_func=send_optimization_data
                 )
             elseif mode == "adaptive"
-                best_solution, best_fitness = HS.harmony_search(
-                    ws, method_id, client_id, request_id, cancel_flag,
+                best_solution, best_fitness = HS.harmony_search(cancel_flag,
                     f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
-                    mode="adaptive", send_func=send_optimization_data
+                    mode="adaptive", send_func=send_optimization_data_closure
                 )
             else
                 @error "Unknown HS mode" mode=mode
@@ -251,3 +280,5 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
         send_error(ws, client_id, request_id, "Optimization failed: $e")
     end
 end
+
+end # module 

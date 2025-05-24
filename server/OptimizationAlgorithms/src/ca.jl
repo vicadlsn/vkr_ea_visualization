@@ -2,7 +2,7 @@ module CA
 
 using Random
 
-include("./ws.jl") 
+export cultural_algorithm
 
 # Инициализация популяции
 function initialize_population(dim, population_size, lower_bound, upper_bound)
@@ -135,7 +135,7 @@ function evolve(population, situational, normative, num_elites, population_size,
 end
 
 # Главная функция CA
-function cultural_algorithm(ws, task_key, client_id, request_id, cancel_flag::Ref{Bool},  objective_function, dim, lower_bound, upper_bound, max_generations, population_size; num_elites=2, num_accepted=10,send_func=nothing,sigma=1,)
+function cultural_algorithm(cancel_flag::Ref{Bool},  objective_function, dim, lower_bound, upper_bound, max_generations, population_size; num_elites=2, num_accepted=10,send_func=nothing,sigma=1,)
     # Валидация 
     if population_size < num_elites || num_accepted > population_size || dim != length(lower_bound) || dim != length(upper_bound)
         error("Неверные параметры: population_size=$population_size, num_elites=$num_elites, num_accepted=$num_accepted, dim=$dim, bounds_length=$(length(lower_bound))")
@@ -157,7 +157,7 @@ function cultural_algorithm(ws, task_key, client_id, request_id, cancel_flag::Re
     # Основной цикл
     for generation in 1:max_generations
         if cancel_flag[]
-            @info "Cultural Algorithm cancelled" client_id=client_id task_key=task_key
+            @info "Cultural Algorithm cancelled"
             return best_solution, best_fitness
         end
         
@@ -182,7 +182,7 @@ function cultural_algorithm(ws, task_key, client_id, request_id, cancel_flag::Re
 
         # Отправка данных
         if send_func !== nothing
-            send_func(ws, task_key, client_id, request_id, generation, best_fitness, best_solution, current_best_fitness, current_best_solution, population)
+            send_func(generation, best_fitness, best_solution, current_best_fitness, current_best_solution, population)
         end
     end
     

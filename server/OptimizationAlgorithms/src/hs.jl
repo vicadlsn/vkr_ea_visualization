@@ -1,8 +1,8 @@
 module HS
 
-using Random, JSON, WebSockets
+using Random
 
-include("./ws.jl")
+export harmony_search
 
 # Инициализация памяти гармоний
 function initialize_harmony_memory(dim, hms, lower_bound, upper_bound)
@@ -76,7 +76,7 @@ function update_harmony_memory!(harmonies, fitness, new_harmony, new_fitness)
 end
 
 
-function harmony_search(ws, task_key, client_id, request_id, cancel_flag::Ref{Bool},
+function harmony_search(cancel_flag::Ref{Bool},
                         objective_function, dim::Int, 
                         lower_bound::Vector{Float64}, upper_bound::Vector{Float64}, 
                         max_iterations::Int, hms::Int;
@@ -101,7 +101,7 @@ function harmony_search(ws, task_key, client_id, request_id, cancel_flag::Ref{Bo
 
     for iteration in 1:max_iterations
         if cancel_flag[]
-            @info "HS cancelled" client_id=client_id task_key=task_key
+            @info "HS cancelled"
             return best_solution, best_fitness
         end
 
@@ -134,7 +134,7 @@ function harmony_search(ws, task_key, client_id, request_id, cancel_flag::Ref{Bo
         end
 
         if send_func !== nothing
-            send_func(ws, task_key, client_id, request_id, iteration, best_fitness, best_solution, current_best_fitness, current_best_solution, harmonies)
+            send_func(iteration, best_fitness, best_solution, current_best_fitness, current_best_solution, harmonies)
         end
     end
 

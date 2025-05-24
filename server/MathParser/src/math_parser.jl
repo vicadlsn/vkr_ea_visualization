@@ -1,6 +1,5 @@
-module MathParser
-
 using GeneralizedGenerated
+
 const ALLOWED_FUNCTIONS = Set([
     :+, :-, :*, :/, :^,
     :sin, :cos, :tan, :asin, :acos, :atan,
@@ -65,5 +64,3 @@ function make_function_v2(f_expr::String)
     f_wrapped =  v -> f(v[1], v[2])
     return f_wrapped
 end
-
-end #End module

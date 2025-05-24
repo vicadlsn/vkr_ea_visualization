@@ -1,0 +1,17 @@
+name = "App"
+uuid = "ed5cca00-ef07-411d-8f94-e7e9ee2eadca"
+authors = ["vicadlsn <cadinspect@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+LoggingExtras = "e6f89c97-d47a-5376-807f-9c37f3926c36"
+OptimizationServer = "a4676caa-405f-4b48-bb53-70393613ca64"
+WebSockets = "104b5d7c-a370-577a-8038-80a2059c5097"
+
+[compat]
+HTTP = "1.10.16"
+Logging = "1.11.0"
+LoggingExtras = "1.1.0"
+WebSockets = "1.6.0"
