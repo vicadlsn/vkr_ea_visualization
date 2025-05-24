@@ -34,7 +34,7 @@ end
 # par — вероятность настройки высоты
 # bw — диапазон настройки
 # dim — размерность задачи
-function generate_new_harmony(harmonies, lower_bound, upper_bound, hmcr, par, bw, dim)
+function generate_new_harmony(harmonies, lower_bound, upper_bound, hmcr, par, bw, dim,mode::String)
     new_harmony = Vector{Float64}(undef, dim)
     for j in 1:dim
         if rand() < hmcr
@@ -43,8 +43,16 @@ function generate_new_harmony(harmonies, lower_bound, upper_bound, hmcr, par, bw
             new_harmony[j] = harmonies[idx][j]
             # С вероятностью par настраиваем высоту (pitch adjustment)
             if rand() < par
-                delta = bw * rand() * (rand(Bool) ? 1 : -1)
-                new_harmony[j] += delta
+                if mode == "adaptive"
+                    # Гауссовская мутация в адаптивном режиме
+                    bw_j = bw[j] # Используем bw для каждой размерности
+                    new_harmony[j] += randn() * bw_j
+                else
+                    # Каноническая мутация (равномерное распределение)
+                    #delta = bw * rand() * (rand(Bool) ? 1 : -1)
+                    delta = bw * (2 * rand() - 1) # Возмущение в [-bw, bw]
+                    new_harmony[j] += delta
+                end
             end
         else
             # Случайное значение в пределах границ
@@ -73,7 +81,7 @@ function harmony_search(ws, task_key, client_id, request_id, cancel_flags::Dict{
                         lower_bound::Vector{Float64}, upper_bound::Vector{Float64}, 
                         max_iterations::Int, hms::Int;
                         hmcr=0.9, par=0.3, bw=0.01,
-                        mode::String = "canonical")  # "adaptive" или "canonical"
+                        mode::String = "canonical",send_func=nothing)  # "adaptive" или "canonical"
 
     # Проверка входных параметров
     if hms < 1 || dim != length(lower_bound) || dim != length(upper_bound)
@@ -87,10 +95,9 @@ function harmony_search(ws, task_key, client_id, request_id, cancel_flags::Dict{
     harmonies = initialize_harmony_memory(dim, hms, lower_bound, upper_bound)
     fitness = evaluate_harmonies(harmonies, objective_function)
 
-    best_fitness = fitness[1]
-    best_solution = harmonies[1]
-    current_best_fitness = fitness[1]
-    current_best_solution = harmonies[1]
+    best_idx = argmin(fitness)
+    best_fitness = fitness[best_idx]
+    best_solution = copy(harmonies[best_idx])
 
     for iteration in 1:max_iterations
         if get(cancel_flags, task_key, false)
@@ -99,51 +106,36 @@ function harmony_search(ws, task_key, client_id, request_id, cancel_flags::Dict{
         end
 
         # Адаптивное изменение параметров, если выбран режим "adaptive"
+        current_par = par
+        current_bw = bw
         if mode == "adaptive"
-            # par увеличивается линейно с 0.01 до 0.99
-            par = 0.01 + (0.99 - 0.01) * (iteration / max_iterations)
-            # bw экспоненциально уменьшается с 5% до 0.01% поискового пространства
+            # Линейное увеличение par от 0.01 до 0.99
+            current_par = 0.01 + (0.99 - 0.01) * (iteration / max_iterations)
+            # Экспоненциальное уменьшение bw от 5% до 0.01% диапазона поиска
             full_range = upper_bound .- lower_bound
-            bw = full_range .* (0.05 .* exp(-5 * iteration / max_iterations))  # вектор bw по каждой размерности
+            current_bw = full_range .* (0.05 .* exp(-5 * iteration / max_iterations))
         end
 
         # Создание новой гармонии
-        new_harmony = Vector{Float64}(undef, dim)
-        for j in 1:dim
-            if rand() < hmcr
-                idx = rand(1:hms)
-                new_harmony[j] = harmonies[idx][j]
-                if rand() < par
-                    if mode == "adaptive"
-                        # Гауссовская мутация (адаптивный режим)
-                        new_harmony[j] += randn() * bw[j]
-                    else
-                        # Классическая мутация
-                        delta = bw * rand() * (rand(Bool) ? 1 : -1)
-                        new_harmony[j] += delta
-                    end
-                end
-            else
-                new_harmony[j] = lower_bound[j] + (upper_bound[j] - lower_bound[j]) * rand()
-            end
-            new_harmony[j] = clamp(new_harmony[j], lower_bound[j], upper_bound[j])
-        end
-
+        new_harmony = generate_new_harmony(harmonies, lower_bound, upper_bound, hmcr, current_par, 
+        current_bw, dim, mode)
         new_fitness = objective_function(new_harmony)
 
         # Обновление памяти гармоний
         harmonies, fitness = update_harmony_memory!(harmonies, fitness, new_harmony, new_fitness)
 
-        # Лучшее решение
+        # Обновление лучшего решения
         best_idx = argmin(fitness)
         current_best_fitness = fitness[best_idx]
         current_best_solution = harmonies[best_idx]
         if current_best_fitness < best_fitness
             best_fitness = current_best_fitness
-            best_solution = current_best_solution
+            best_solution = copy(current_best_solution)
         end
 
-        send_optimization_data(ws, task_key, client_id, request_id, iteration, best_fitness, best_solution, current_best_fitness, current_best_solution, harmonies)
+        if send_func !== nothing
+            send_func(ws, task_key, client_id, request_id, iteration, best_fitness, best_solution, current_best_fitness, current_best_solution, harmonies)
+        end
     end
 
     return best_solution, best_fitness

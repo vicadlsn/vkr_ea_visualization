@@ -3,8 +3,6 @@ export bbo
 
 using Random, Base.Threads
 
-include("./ws.jl")
-
 function initialize_population(dim, population_size, lower_bound, upper_bound)
    # return [lower_bound .+ (upper_bound-lower_bound) * rand(dim) for _ in 1:population_size]
    return [[lower_bound[j] + (upper_bound[j] - lower_bound[j]) * rand() for j in 1:dim] for _ in 1:population_size]
@@ -47,7 +45,7 @@ function sort_population(population, fitness)
     return population[indices], fitness[indices]
 end
 
-function bbo(ws, task_key, client_id, request_id, cancel_flags::Dict{String, Bool}, objective_function, dim, population_size, lower_bound, upper_bound, max_generations, mutation_probability, alpha, num_elites)
+function bbo(ws, task_key, client_id, request_id, cancel_flags::Dict{String, Bool}, objective_function, dim, lower_bound, upper_bound, max_generations, population_size; mutation_probability=0.04, blending_rate=0.1, num_elites=2, send_func=nothing)
     # Инициализация популяции
     population = initialize_population(dim, population_size, lower_bound, upper_bound)
     fitness = evaluate_population(population, objective_function)
@@ -81,7 +79,7 @@ function bbo(ws, task_key, client_id, request_id, cancel_flags::Dict{String, Boo
             for j in 1:dim
                 if rand() < lambda[i]
                     selected_index = roulette_wheel_selection(mu)
-                    new_population[i][j] = alpha * new_population[i][j] + (1-alpha)*population[selected_index][j]
+                    new_population[i][j] = blending_rate * new_population[i][j] + (1-blending_rate)*population[selected_index][j]
                     new_population[i][j] = clamp(new_population[i][j], lower_bound[j], upper_bound[j]) # если вышли за допустимые границы
 
                 end
@@ -119,10 +117,10 @@ function bbo(ws, task_key, client_id, request_id, cancel_flags::Dict{String, Boo
             best_solution = current_best_solution
         end
 
-        # Отображение результатов по итерациям
-       # println("Поколение $generation: Лучшее значение = $(fitness[1])")
-
-        send_optimization_data(ws, task_key, client_id, request_id, generation, best_fitness, best_solution, current_best_fitness, current_best_solution, population)
+       
+        if send_func !== nothing
+            send_func(ws, task_key, client_id, request_id, generation, best_fitness, best_solution, current_best_fitness, current_best_solution, population)
+        end
     end
 
     return best_solution, best_fitness

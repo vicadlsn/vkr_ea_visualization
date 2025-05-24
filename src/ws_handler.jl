@@ -9,6 +9,8 @@ include("./caep.jl")
 include("./ca.jl")
 include("./math.jl")
 include("./hs.jl")
+include("./ws.jl")
+
 const DIMENSION = 2
 
 function cleanup_tasks(optimizations::Dict{String, Task}, cancel_flags::Dict{String, Bool}, rlock::ReentrantLock)
@@ -24,11 +26,27 @@ function handle_ws_client(http::HTTP.Stream)
     optimizations = Dict{String, Task}()
     cancel_flags = Dict{String, Bool}()
     rlock = ReentrantLock()
+    send_channel = Channel{String}(100)
+
     client_id = string(uuid4())
     @info "Handling WebSocket client" client_id=client_id
+
     try
         HTTP.WebSockets.upgrade(http) do ws
             @info "New WebSocket connection established" client_id=client_id
+
+            # Отдельный таск отправки сообщений
+            @async begin
+                for msg in send_channel
+                    try
+                        send(ws, msg)
+                    catch e
+                        @error "Ошибка отправки в WebSocket: $e"
+                        break
+                    end
+                end
+            end
+
             handle_ws_messages(ws, client_id, optimizations, cancel_flags, rlock)
         end
     catch e
@@ -186,7 +204,7 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
     best_solution, best_fitness = nothing, nothing
     try
         if method_id == "bbo"
-            best_solution, best_fitness =  BBO.bbo(ws, method_id, client_id, request_id, cancel_flags, f_v, DIMENSION, params["islands_count"], lower_bounds, upper_bounds, params["iterations_count"], params["mutation_probability"], params["blending_rate"], params["num_elites"])
+            best_solution, best_fitness = BBO.bbo(ws, method_id, client_id, request_id, cancel_flags, f_v, DIMENSION, lower_bounds, upper_bounds, params["iterations_count"],params["islands_count"];  mutation_probability=params["mutation_probability"], blending_rate=params["blending_rate"], num_elites=params["num_elites"], send_func=send_optimization_data)
         elseif method_id == "cultural"
             population_size = params["population_size"]
             num_elites = params["num_elites"]
@@ -197,7 +215,7 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
             best_solution, best_fitness = CA.cultural_algorithm(
                 ws, method_id, client_id, request_id, cancel_flags,
                 f_v, dim, lower_bounds, upper_bounds, max_iters, population_size;
-                num_elites=num_elites, num_accepted=num_accepted
+                num_elites=num_elites, num_accepted=num_accepted, send_func=send_optimization_data
             )
 
         elseif method_id == "harmony"
@@ -212,13 +230,13 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
                 best_solution, best_fitness = HS.harmony_search(
                     ws, method_id, client_id, request_id, cancel_flags,
                     f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
-                    hmcr=hmcr, par=par, bw=bw, mode="canonical"
+                    hmcr=hmcr, par=par, bw=bw, mode="canonical", send_func=send_optimization_data
                 )
             elseif mode == "adaptive"
                 best_solution, best_fitness = HS.harmony_search(
                     ws, method_id, client_id, request_id, cancel_flags,
                     f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
-                    mode="adaptive"
+                    mode="adaptive", send_func=send_optimization_data
                 )
             else
                 @error "Unknown HS mode" mode
