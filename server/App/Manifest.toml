@@ -2,7 +2,7 @@
 
 julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "d2d1c23fc53e2d9e466e6567b8d9cec76b67c0be"
+project_hash = "ccce6a68aeb8c677b6a5306e1ff749f6e067e837"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -172,7 +172,7 @@ uuid = "fa6867e5-13c4-4c3b-9f16-eeaec5120600"
 version = "0.1.0"
 
 [[deps.OptimizationServer]]
-deps = ["HTTP", "JSON", "MathParser", "OptimizationAlgorithms", "Sockets", "UUIDs"]
+deps = ["HTTP", "JSON", "MathParser", "OptimizationAlgorithms", "PrecompileTools", "Sockets", "UUIDs"]
 path = "../OptimizationServer"
 uuid = "a4676caa-405f-4b48-bb53-70393613ca64"
 version = "0.1.0"
@@ -260,12 +260,6 @@ version = "1.11.0"
 [[deps.Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 version = "1.11.0"
-
-[[deps.WebSockets]]
-deps = ["Base64", "Dates", "HTTP", "Logging", "Sockets"]
-git-tree-sha1 = "4162e95e05e79922e44b9952ccbc262832e4ad07"
-uuid = "104b5d7c-a370-577a-8038-80a2059c5097"
-version = "1.6.0"
 
 [[deps.Zlib_jll]]
 deps = ["Libdl"]

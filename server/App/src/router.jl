@@ -1,7 +1,6 @@
 module Router 
 
 using HTTP
-using WebSockets
 
 export create_router
 

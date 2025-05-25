@@ -29,17 +29,14 @@ function setup_logger()
         ConsoleLogger(stderr, Logging.Info),
         logger
     ))
+    
     @info "Logger initialized" log_file=log_file
 end
-
 
 function main() 
     setup_logger()
     router = create_router()
 
-    # Обработка SIGINT для graceful shutdown
-    Base.exit_on_sigint(false)
-    
     server_task = @async try
         HTTP.listen(LOCALIP, HTTP_PORT) do http::HTTP.Stream
             if HTTP.WebSockets.isupgrade(http.message)
@@ -53,18 +50,11 @@ function main()
         rethrow()
     end
 
-    try
-        wait(server_task)
-    catch e
-        if e isa InterruptException
-            @info "Shutting down server"
-        else
-            @error "Server error: " error
-        end
-    end
-
+    wait(server_task)
 end
 
 main()
+
+
 
 end
