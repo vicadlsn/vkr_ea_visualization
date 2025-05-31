@@ -1,0 +1,10 @@
+name = "MathParser"
+uuid = "a1156fdf-c005-4fff-ab82-c1f9927bea2a"
+authors = ["vicadlsn <cadinspect@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+GeneralizedGenerated = "6b9d7cbe-bcb9-11e9-073f-15a7a543e2eb"
+
+[compat]
+GeneralizedGenerated = "0.3.3"

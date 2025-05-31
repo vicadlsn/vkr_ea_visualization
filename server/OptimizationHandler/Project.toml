@@ -1,0 +1,22 @@
+name = "OptimizationHandler"
+uuid = "d20443c9-7f2a-45c8-aa92-430f913e8fc4"
+authors = ["vicadlsn <cadinspect@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+MathParser = "a1156fdf-c005-4fff-ab82-c1f9927bea2a"
+OptimizationAlgorithms = "fa6867e5-13c4-4c3b-9f16-eeaec5120600"
+PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
+Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
+UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
+
+[compat]
+BenchmarkTools = "1.6.0"
+HTTP = "1.10.16"
+JSON = "0.21.4"
+PrecompileTools = "1.2.1"
+Sockets = "1.11.0"
+UUIDs = "1.11.0"

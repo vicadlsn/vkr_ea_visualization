@@ -1,30 +1,18 @@
 module HS
 
-using Random, JSON, WebSockets
+using Random
 
-include("./ws.jl")
+export harmony_search
 
 # Инициализация памяти гармоний
-function initialize_harmony_memory(dim, hms, lower_bound, upper_bound)
-    if any(lower_bound .>= upper_bound)
-        error("Неверные границы")
-    end
-    if hms < 1
-        error("Неверный размер памяти гармоний")
-    end
-    return [lower_bound .+ (upper_bound .- lower_bound) .* rand(dim) for _ in 1:hms]
+function initialize_harmony_memory(dim::Int, hms::Int, lower_bound, upper_bound)
+    rand_matrix = rand(dim, hms)
+    return lower_bound .+ (upper_bound .- lower_bound) .* rand_matrix
 end
 
 # Вычисление фитнес-функции
-function evaluate_harmonies(harmonies, cost_func)
-    fitness = Vector{Float64}(undef, length(harmonies))
-    for i in 1:length(harmonies)
-        fitness[i] = cost_func(harmonies[i])
-        if !isfinite(fitness[i])
-            error("Non-finite fitness value at harmony $i")
-        end
-    end
-    return fitness
+function evaluate_harmonies(harmonies::Matrix{Float64}, cost_func)
+    return [cost_func(h) for h in eachcol(harmonies)]
 end
 
 # Генерация новой гармонии
@@ -34,22 +22,23 @@ end
 # par — вероятность настройки высоты
 # bw — диапазон настройки
 # dim — размерность задачи
-function generate_new_harmony(harmonies, lower_bound, upper_bound, hmcr, par, bw, dim,mode::String)
+function generate_new_harmony(harmonies::Matrix{Float64}, lower_bound, upper_bound, hmcr::Float64, par::Float64, bw, dim::Int, mode::String)
     new_harmony = Vector{Float64}(undef, dim)
-    for j in 1:dim
+    hms = size(harmonies, 2)
+
+    for j in eachindex(lower_bound)
         if rand() < hmcr
             # Выбор значения из памяти гармоний
-            idx = rand(1:length(harmonies))
-            new_harmony[j] = harmonies[idx][j]
+            idx = rand(1:hms)
+            new_harmony[j] = harmonies[j, idx]
             # С вероятностью par настраиваем высоту (pitch adjustment)
             if rand() < par
                 if mode == "adaptive"
                     # Гауссовская мутация в адаптивном режиме
-                    bw_j = bw[j] # Используем bw для каждой размерности
-                    new_harmony[j] += randn() * bw_j
+
+                    new_harmony[j] += randn() * bw[j] # Используем bw для каждой размерности
                 else
                     # Каноническая мутация (равномерное распределение)
-                    #delta = bw * rand() * (rand(Bool) ? 1 : -1)
                     delta = bw * (2 * rand() - 1) # Возмущение в [-bw, bw]
                     new_harmony[j] += delta
                 end
@@ -66,42 +55,45 @@ end
 
 # Обновление памяти гармоний
 # Заменяем худшую гармонию на новую, если она лучше
-function update_harmony_memory!(harmonies, fitness, new_harmony, new_fitness)
+function update_harmony_memory!(harmonies::Matrix{Float64}, fitness::Vector{Float64},
+                                new_harmony::Vector{Float64}, new_fitness::Float64)
     worst_idx = argmax(fitness)
     if new_fitness < fitness[worst_idx]
-        harmonies[worst_idx] = copy(new_harmony)
+        harmonies[:, worst_idx] = new_harmony
         fitness[worst_idx] = new_fitness
     end
-    return harmonies, fitness
 end
 
 
-function harmony_search(ws, task_key, client_id, request_id, cancel_flags::Dict{String, Bool},
+function harmony_search(cancel_flag::Ref{Bool},
                         objective_function, dim::Int, 
-                        lower_bound::Vector{Float64}, upper_bound::Vector{Float64}, 
+                        lower_bound, upper_bound, 
                         max_iterations::Int, hms::Int;
                         hmcr=0.9, par=0.3, bw=0.01,
-                        mode::String = "canonical",send_func=nothing)  # "adaptive" или "canonical"
-
-    # Проверка входных параметров
-    if hms < 1 || dim != length(lower_bound) || dim != length(upper_bound)
-        error("Неверные параметры: hms=$hms, dim=$dim, bounds_length=$(length(lower_bound))")
-    end
-    if !(0 <= hmcr <= 1)
-        error("Неверный HMCR: $hmcr")
-    end
-
+                        mode::String = "canonical",send_func=nothing,target_fitness=-Inf)  # "adaptive" или "canonical"
     # Инициализация памяти гармоний и оценка
     harmonies = initialize_harmony_memory(dim, hms, lower_bound, upper_bound)
     fitness = evaluate_harmonies(harmonies, objective_function)
 
     best_idx = argmin(fitness)
+    best_solution = copy(harmonies[:, best_idx])
     best_fitness = fitness[best_idx]
-    best_solution = copy(harmonies[best_idx])
+
+    if send_func !== nothing
+        send_func(0, best_fitness, best_solution, collect(eachcol(harmonies)))
+    end
 
     for iteration in 1:max_iterations
-        if get(cancel_flags, task_key, false)
-            @info "HS cancelled" client_id=client_id task_key=task_key
+        if cancel_flag[]
+            @info "HS cancelled"
+            return best_solution, best_fitness
+        end
+
+        if best_fitness <= target_fitness
+            #@info "HS stopped: target fitness $target_fitness reached at generation $generation"
+            if send_func !== nothing
+                send_func(iteration, best_fitness, best_solution, collect(eachcol(harmonies)))
+            end
             return best_solution, best_fitness
         end
 
@@ -113,28 +105,28 @@ function harmony_search(ws, task_key, client_id, request_id, cancel_flags::Dict{
             current_par = 0.01 + (0.99 - 0.01) * (iteration / max_iterations)
             # Экспоненциальное уменьшение bw от 5% до 0.01% диапазона поиска
             full_range = upper_bound .- lower_bound
-            current_bw = full_range .* (0.05 .* exp(-5 * iteration / max_iterations))
+            current_bw = full_range .* (0.05 * exp(-5 * iteration / max_iterations))
         end
 
         # Создание новой гармонии
-        new_harmony = generate_new_harmony(harmonies, lower_bound, upper_bound, hmcr, current_par, 
-        current_bw, dim, mode)
+        new_harmony = generate_new_harmony(harmonies, lower_bound, upper_bound,
+                                           hmcr, current_par, current_bw, dim, mode)
         new_fitness = objective_function(new_harmony)
 
         # Обновление памяти гармоний
-        harmonies, fitness = update_harmony_memory!(harmonies, fitness, new_harmony, new_fitness)
+        update_harmony_memory!(harmonies, fitness, new_harmony, new_fitness)
 
         # Обновление лучшего решения
-        best_idx = argmin(fitness)
-        current_best_fitness = fitness[best_idx]
-        current_best_solution = harmonies[best_idx]
+        current_best_idx = argmin(fitness)
+        current_best_fitness = fitness[current_best_idx]
+
         if current_best_fitness < best_fitness
             best_fitness = current_best_fitness
-            best_solution = copy(current_best_solution)
+            best_solution = copy(harmonies[:, current_best_idx])
         end
 
         if send_func !== nothing
-            send_func(ws, task_key, client_id, request_id, iteration, best_fitness, best_solution, current_best_fitness, current_best_solution, harmonies)
+            send_func(iteration, best_fitness, best_solution, collect(eachcol(harmonies)))
         end
     end
 

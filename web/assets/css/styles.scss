@@ -354,7 +354,8 @@ button:active,
 .active-button,
 .tabButton.active-button,
 .tabButton:first-child.active-button,
-#startOptimization:active {
+#startOptimization:active,
+#startOptimization:disabled {
     background-color: $accent-color;
     color: #fff;
     box-shadow: $box-shadow-inset-active;
@@ -371,6 +372,14 @@ button:active,
     position: absolute;
     bottom: 10px;
     left: 10px;
+    width: 100px;
+    z-index: 10;
+}
+
+#showTrajectory {
+    position: absolute;
+    bottom: 10px;
+    left: 130px;
     width: 100px;
     z-index: 10;
 }

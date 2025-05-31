@@ -1,8 +1,16 @@
-import { parse } from 'mathjs';
+import { parse, FunctionNode } from 'mathjs';
 
 export { builtinFunctions, getFunctionData, evaluateFunction, getFunctionLabels };
 
 const builtinFunctions = {};
+builtinFunctions['sphere'] = {
+    original: 'x^2 + y^2',
+    boundsX: [-5.12, 5.12],
+    boundsY: [-5.12, 5.12],
+    zoom: [1, 1, 1],
+    name: 'Сферическая функция',
+};
+
 builtinFunctions['rastrigin'] = {
     original: '20 + (x * x - 10 * cos(2 * pi * x)) + (y * y - 10 * cos(2 * pi * y))',
     boundsX: [-5.12, 5.12],
@@ -19,10 +27,10 @@ builtinFunctions['rosenbrock'] = {
 };
 
 builtinFunctions['schwefel'] = {
-    original: '-x * sin(sqrt(abs(x))) - y*sin(sqrt(abs(y)))',
-    boundsX: [-100, 100],
-    boundsY: [-100, 100],
-    zoom: [1, 1, 1],
+    original: '418.9829*2-x * sin(sqrt(abs(x))) - y*sin(sqrt(abs(y)))',
+    boundsX: [-500, 500],
+    boundsY: [-500, 500],
+    zoom: [0.01, 0.01, 0.01],
     name: 'Функция Швефеля',
 };
 
@@ -50,14 +58,6 @@ builtinFunctions['levy'] = {
     boundsY: [-10, 10],
     zoom: [1, 1, 0.01],
     name: 'Функция Леви',
-};
-
-builtinFunctions['schaffer'] = {
-    original: '0.5-(sin(sqrt(x^2+y^2))^2-0.5)/(1+0.001(x^2+y^2))^2',
-    boundsX: [-10, 10],
-    boundsY: [-10, 10],
-    zoom: [1, 1, 1],
-    name: 'Schaffer function',
 };
 
 const allowedFunctions = new Set([
@@ -95,6 +95,36 @@ const allowedFunctions = new Set([
     'mod',
     'hypot',
 ]);
+
+const functionArity = {
+    sqrt: 1,
+    cbrt: 1,
+    abs: 1,
+    exp: 1,
+    log: [1, 2],
+    log10: 1,
+    log2: 1,
+    sin: 1,
+    cos: 1,
+    tan: 1,
+    asin: 1,
+    acos: 1,
+    atan: 1,
+    sinh: 1,
+    cosh: 1,
+    tanh: 1,
+    asinh: 1,
+    acosh: 1,
+    atanh: 1,
+    round: 1,
+    ceil: 1,
+    floor: 1,
+    hypot: null, // допускает >= 1
+    min: null, // допускает >= 1
+    max: null, // допускает >= 1
+    mod: 2,
+};
+
 const allowedSymbols = new Set(['x', 'y', 'pi', 'e', 'E', 'PI']);
 
 const getFunctionLabels = () => {
@@ -113,7 +143,21 @@ function isSafeNode(node) {
     }
 
     if (node.isFunctionNode) {
-        return allowedFunctions.has(node.fn.name) && node.args.every(isSafeNode);
+        const name = node.fn.name;
+        if (!allowedFunctions.has(name)) return false;
+
+        const expected = functionArity[name];
+        const actual = node.args.length;
+
+        if (expected === null) {
+            if (actual < 1) return false;
+        } else if (Array.isArray(expected)) {
+            if (!expected.includes(actual)) return false;
+        } else if (actual !== expected) {
+            return false;
+        }
+
+        return node.args.every(isSafeNode);
     }
 
     if (node.isSymbolNode) {
@@ -131,21 +175,32 @@ function isSafeNode(node) {
     return false;
 }
 
-const getFunctionData = (expression) => {
-    /*try {
-        const parsed = math.parse(expression);
-        parsed.evaluate({ x: 1, y: 1 });
-        return { original: expression, parsed: parsed };
-    } catch (error) {
-        console.error("Ошибка парсинга:", error);
-        return null;
-    }*/
+function transformSafeExpression(node) {
+    return node.transform(function (node) {
+        if (node.isFunctionNode) {
+            const name = node.name;
 
+            // log(x, base) -> log(base, x)
+            if (name === 'log' && node.args.length === 2) {
+                return new FunctionNode('log', [node.args[1], node.args[0]]);
+            }
+        }
+
+        return node;
+    });
+}
+
+const getFunctionData = (expression) => {
     try {
         const parsed = parse(expression);
-        const safe = isSafeNode(parsed);
-        if (!safe) return null;
-        return { original: expression, parsed: parsed };
+        if (!isSafeNode(parsed)) return null;
+
+        const transformed = transformSafeExpression(parsed);
+        return {
+            original: expression,
+            parsed: parsed,
+            juliaString: transformed.toString(),
+        };
     } catch (error) {
         console.error('Ошибка парсинга:', error);
         return null;

@@ -1,9 +1,8 @@
 module Router 
 
 using HTTP
-using WebSockets
 
-export create_router 
+export create_router
 
 const base = "web/dist/"
 
@@ -48,7 +47,7 @@ function create_router()
     
     HTTP.register!(router, "GET", "/", index_handler)
     HTTP.register!(router, "GET", "/assets/**", static_handler)
-   # HTTP.register!(router, "GET", "/modules/**", static_handler)
+    HTTP.register!(router, "GET", "/modules/**", static_handler)
     #HTTP.register!(router, "GET", "/static/**", static_handler)
     return router
 end

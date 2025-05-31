@@ -8,9 +8,10 @@ import {
     addPoints,
     initConvergencePlot,
     updateConvergencePlot,
+    addTrajectory,
 } from './plot.js';
 
-export { updatePlot, updateMethodInfo, getCurrentTabData };
+export { updatePlot, updateMethodInfo, updateCurrentStatus, getCurrentTabData };
 
 export function isFormValid() {
     const invalidInputs = document.querySelectorAll('.form-input-error');
@@ -25,50 +26,55 @@ function restoreStateFunctionChange() {
     const tab = getCurrentTabData();
     tab.population = [];
     tab.history = [];
-    tab.current_best_solution = undefined;
-    tab.current_best_fitness = undefined;
+    tab.trajectory = [];
+    // tab.current_best_solution = undefined;
+    // tab.current_best_fitness = undefined;
     tab.best_solution = undefined;
     tab.best_fitness = undefined;
     tab.iteration = 0;
     tab.total_iterations = 0;
 }
+
+const tabStatus = document.getElementById('tabStatus');
+function updateCurrentStatus() {
+    tabStatus.textContent = getCurrentTabData().currentStatus;
+}
+
 function updateMethodInfo() {
-    const currentTab = getCurrentTabData();
+    const tabData = getCurrentTabData();
     const func = getCurrentTabDataFunction().function.original;
 
-    const bestCurrentSolution =
-        Array.isArray(currentTab.current_best_solution) &&
-        currentTab.current_best_solution.length >= 2
-            ? `(${currentTab.current_best_solution[0].toFixed(4)}, ${currentTab.current_best_solution[1].toFixed(4)})`
+    /*const bestCurrentSolution =
+        Array.isArray(tabData.current_best_solution) && tabData.current_best_solution.length >= 2
+            ? `(${tabData.current_best_solution[0].toFixed(4)}, ${tabData.current_best_solution[1].toFixed(4)})`
             : '';
-
-    const bestCurrentFitness =
-        typeof currentTab.current_best_fitness === 'number'
-            ? currentTab.current_best_fitness.toFixed(4)
+*/
+    /*const bestCurrentFitness =
+        typeof tabData.current_best_fitness === 'number'
+            ? tabData.current_best_fitness.toFixed(4)
             : '';
-
+*/
     const bestSolution =
-        Array.isArray(currentTab.best_solution) && currentTab.best_solution.length >= 2
-            ? `(${currentTab.best_solution[0].toFixed(4)}, ${currentTab.best_solution[1].toFixed(4)})`
+        Array.isArray(tabData.best_solution) && tabData.best_solution.length >= 2
+            ? `(${tabData.best_solution[0].toFixed(4)}, ${tabData.best_solution[1].toFixed(4)})`
             : '';
 
     const bestFitness =
-        typeof currentTab.best_fitness === 'number' ? currentTab.best_fitness.toFixed(4) : '';
+        typeof tabData.best_fitness === 'number' ? tabData.best_fitness.toFixed(4) : '';
 
     const iteration =
-        typeof currentTab.iteration === 'number' && typeof currentTab.total_iterations === 'number'
-            ? `${currentTab.iteration}/${currentTab.total_iterations}`
+        typeof tabData.iteration === 'number' && typeof tabData.total_iterations === 'number'
+            ? `${tabData.iteration}/${tabData.total_iterations}`
             : '';
 
     info.innerHTML = `
         <strong>Функция:</strong> ${func}<br>
-        <strong>Метод:</strong> ${state.currentTab}<br>
-        <strong>Текущее решение:</strong> ${bestCurrentSolution}<br>
-        <strong>Текущее значение:</strong> ${bestCurrentFitness}<br>
         <strong>Лучшее решение:</strong> ${bestSolution}<br>
         <strong>Лучшее значение:</strong> ${bestFitness}<br>
         <strong>Итерация:</strong> ${iteration}<br>
     `;
+    // <strong>Метод:</strong> ${tabData.method_name}<br>
+    updateCurrentStatus();
 }
 
 function updatePlot() {
@@ -79,6 +85,7 @@ function updatePlot() {
             { ...state.plotSettings, ...tabData.plotSettings },
             tabData.population,
             tabData.best_solution,
+            tabData.trajectory,
         );
     } else {
         updateConvergencePlot(convergencePlotDiv, tabData.history);
@@ -102,6 +109,12 @@ function handleFunctionChange(inputElement, selectElement, functionErrorElement)
     const tabData = getCurrentTabData();
     const data = getFunctionData(inputElement.value);
     if (data) {
+        const tab = getCurrentTabData();
+        if (state.activeRequests[tab.method_name]) {
+            alert('Нельзя обновить функцию, пока задача выполняется в этой вкладке.');
+            return;
+        }
+
         setInput(inputElement, true, functionErrorElement);
         tabData.currentFunction.function = data;
         tabData.currentFunction.builtin = '';
@@ -207,7 +220,7 @@ function setupTabs() {
     bboTabButton.addEventListener('click', (e) => {
         if (!isFormValid()) {
             e.preventDefault();
-            alert('Пожалуйста, исправьте ошибки в вводе.');
+            alert('Пожалуйста, исправьте ошибки на текущей вкладке.');
             return;
         }
         activateTab(METHOD_NAMES.bbo);
@@ -215,7 +228,7 @@ function setupTabs() {
     culturalTabButton.addEventListener('click', (e) => {
         if (!isFormValid()) {
             e.preventDefault();
-            alert('Пожалуйста, исправьте данные на текущей вкладке.');
+            alert('Пожалуйста, исправьте ошибки на текущей вкладке.');
             return;
         }
         activateTab(METHOD_NAMES.cultural);
@@ -223,7 +236,7 @@ function setupTabs() {
     harmonyTabButton.addEventListener('click', (e) => {
         if (!isFormValid()) {
             e.preventDefault();
-            alert('Пожалуйста, исправьте данные на текущей вкладке.');
+            alert('Пожалуйста, исправьте ошибки на текущей вкладке.');
             return;
         }
         activateTab(METHOD_NAMES.harmony);
@@ -234,6 +247,12 @@ function setupEventListeners() {
     functionInput.value = getCurrentTabDataFunction().function.original;
 
     functionSelectBuiltin.addEventListener('change', (event) => {
+        const tab = getCurrentTabData();
+        if (state.activeRequests[tab.method_name]) {
+            alert('Нельзя обновить функцию, пока задача выполняется в этой вкладке.');
+            return;
+        }
+
         const target = event.target;
         const builtin = builtinFunctions[target.value];
         const curFunc = getCurrentTabDataFunction();
@@ -269,19 +288,58 @@ function setupEventListeners() {
     );
 
     xRangeMinInput.addEventListener('change', () => {
-        getCurrentTabDataFunction().boundsX[0] = parseFloat(xRangeMinInput.value);
+        const value = parseFloat(xRangeMinInput.value);
+        const boundsMax = getCurrentTabDataFunction().boundsX[1];
+
+        if (isNaN(value) || value >= boundsMax) {
+            xRangeMinInput.classList.add('form-input-error');
+            return;
+        }
+
+        getCurrentTabDataFunction().boundsX[0] = value;
+        xRangeMinInput.classList.remove('form-input-error');
         updatePlot();
     });
+
     xRangeMaxInput.addEventListener('change', () => {
-        getCurrentTabDataFunction().boundsX[1] = parseFloat(xRangeMaxInput.value);
+        const value = parseFloat(xRangeMaxInput.value);
+        const boundsMin = getCurrentTabDataFunction().boundsX[0];
+
+        if (isNaN(value) || value <= boundsMin) {
+            xRangeMaxInput.classList.add('form-input-error');
+            return;
+        }
+
+        getCurrentTabDataFunction().boundsX[1] = value;
+        xRangeMaxInput.classList.remove('form-input-error');
         updatePlot();
     });
+
     yRangeMinInput.addEventListener('change', () => {
-        getCurrentTabDataFunction().boundsY[0] = parseFloat(yRangeMinInput.value);
+        const value = parseFloat(yRangeMinInput.value);
+        const boundsMax = getCurrentTabDataFunction().boundsY[1];
+
+        if (isNaN(value) || value >= boundsMax) {
+            yRangeMinInput.classList.add('form-input-error');
+            return;
+        }
+
+        getCurrentTabDataFunction().boundsY[0] = value;
+        yRangeMinInput.classList.remove('form-input-error');
         updatePlot();
     });
+
     yRangeMaxInput.addEventListener('change', () => {
-        getCurrentTabDataFunction().boundsY[1] = parseFloat(yRangeMaxInput.value);
+        const value = parseFloat(yRangeMaxInput.value);
+        const boundsMin = getCurrentTabDataFunction().boundsY[0];
+
+        if (isNaN(value) || value <= boundsMin) {
+            yRangeMaxInput.classList.add('form-input-error');
+            return;
+        }
+
+        getCurrentTabDataFunction().boundsY[1] = value;
+        yRangeMaxInput.classList.remove('form-input-error');
         updatePlot();
     });
 
@@ -309,15 +367,33 @@ function setupEventListeners() {
     aspectratioZInput.value = tabData.plotSettings.aspectratioZ;
 
     aspectratioXInput.addEventListener('change', () => {
-        getCurrentTabData().plotSettings.aspectratioX = parseFloat(aspectratioXInput.value);
+        const value = parseFloat(aspectratioXInput.value);
+        if (isNaN(value)) {
+            aspectratioXInput.classList.add('form-input-error');
+            return;
+        }
+        getCurrentTabData().plotSettings.aspectratioX = value;
+        aspectratioXInput.classList.remove('form-input-error');
         updatePlot();
     });
     aspectratioYInput.addEventListener('change', () => {
-        getCurrentTabData().plotSettings.aspectratioY = parseFloat(aspectratioYInput.value);
+        const value = parseFloat(aspectratioYInput.value);
+        if (isNaN(value)) {
+            aspectratioYInput.classList.add('form-input-error');
+            return;
+        }
+        getCurrentTabData().plotSettings.aspectratioY = value;
+        aspectratioYInput.classList.remove('form-input-error');
         updatePlot();
     });
     aspectratioZInput.addEventListener('change', () => {
-        getCurrentTabData().plotSettings.aspectratioZ = parseFloat(aspectratioZInput.value);
+        const value = parseFloat(aspectratioZInput.value);
+        if (isNaN(value)) {
+            aspectratioZInput.classList.add('form-input-error');
+            return;
+        }
+        getCurrentTabData().plotSettings.aspectratioZ = value;
+        aspectratioZInput.classList.remove('form-input-error');
         updatePlot();
     });
 
@@ -337,6 +413,12 @@ function setupEventListeners() {
             state.copied.function &&
             typeof state.copied.iterations_count === 'number'
         ) {
+            const tab = getCurrentTabData();
+            if (state.activeRequests[tab.method_name]) {
+                alert('Нельзя обновить настройки, пока задача выполняется в этой вкладке.');
+                return;
+            }
+
             const copiedFunction = state.copied.function;
 
             functionInput.value = copiedFunction.function.original || '';
@@ -506,24 +588,34 @@ function setupAlgorithmParams() {
     // --- Cultural ---
     const caPopulationSize = document.getElementById('ca_population_size');
     const caPopulationSizeErrorDiv = document.getElementById('ca_population_size_error');
-    const caNumElites = document.getElementById('ca_num_elites');
+    // const caNumElites = document.getElementById('ca_num_elites');
+    // const caNumElitesErrorDiv = document.getElementById('ca_num_elites_error');
+
     const caNumAccepted = document.getElementById('ca_num_accepted');
-    const caNumElitesErrorDiv = document.getElementById('ca_num_elites_error');
     const caNumAcceptedErrorDiv = document.getElementById('ca_num_accepted_error');
+
+    const caBeliefSpaceInertia = document.getElementById('ca_belief_space_inertia');
+    const caBeliefSpaceInertiaErrorDiv = document.getElementById('ca_belief_space_inertia_error');
+
+    const caMutationalDispersion = document.getElementById('ca_mutational_dispersion');
+    const caMutationalDispersionErrorDiv = document.getElementById(
+        'ca_mutational_dispersion_error',
+    );
 
     function setupCulturalInputs() {
         const culturalState = state.tabsData[METHOD_NAMES.cultural];
         const params = culturalState.params;
 
         caPopulationSize.value = params.population_size;
-        caNumElites.value = params.num_elites;
+        // caNumElites.value = params.num_elites;
         caNumAccepted.value = params.num_accepted;
+        caBeliefSpaceInertia.value = params.inertia;
+        caMutationalDispersion.value = params.dispersion;
 
         function validateCAFields(source) {
             const count = parseInt(caPopulationSize.value);
-            const elites = parseInt(caNumElites.value);
+            //  const elites = parseInt(caNumElites.value);
             const accepted = parseInt(caNumAccepted.value);
-
             let valid = true;
 
             // Проверка count
@@ -538,8 +630,9 @@ function setupAlgorithmParams() {
                 }
                 valid = false;
             } else if (
-                (Number.isInteger(elites) && elites > count) ||
-                (Number.isInteger(accepted) && accepted > count)
+                // (Number.isInteger(elites) && elites > count) ||
+                Number.isInteger(accepted) &&
+                accepted > count
             ) {
                 if (source === 'count') {
                     setInput(
@@ -555,7 +648,7 @@ function setupAlgorithmParams() {
             }
 
             // Проверка элитных особей
-            if (!Number.isInteger(elites) || elites < 0 || elites > count) {
+            /*if (!Number.isInteger(elites) || elites < 0 || elites > count) {
                 if (source === 'elites') {
                     setInput(
                         caNumElites,
@@ -568,15 +661,15 @@ function setupAlgorithmParams() {
             } else {
                 setInput(caNumElites, true, caNumElitesErrorDiv);
             }
-
+*/
             // Проверка принятых особей
-            if (!Number.isInteger(accepted) || accepted < 0 || accepted > count) {
+            if (!Number.isInteger(accepted) || accepted < 1 || accepted > count) {
                 if (source === 'accepted') {
                     setInput(
                         caNumAccepted,
                         false,
                         caNumAcceptedErrorDiv,
-                        'Число принятых особей должно быть неотрицательным и не больше числа всех особей',
+                        'Число принятых особей должно быть >= 1 и не больше числа всех особей',
                     );
                 }
                 valid = false;
@@ -586,17 +679,35 @@ function setupAlgorithmParams() {
 
             if (valid) {
                 params.population_size = count;
-                params.num_elites = elites;
+                //  params.num_elites = elites;
                 params.num_accepted = accepted;
             }
         }
 
+        bindNumericInput(
+            caBeliefSpaceInertia,
+            parseFloat,
+            (val) => (params.inertia = val),
+            (val) => typeof val === 'number' && !Number.isNaN(val) && val >= 0 && val <= 1,
+            caBeliefSpaceInertiaErrorDiv,
+            'Инерция пространства убеждений должна быть в диапазоне [0, 1]',
+        );
+
+        bindNumericInput(
+            caMutationalDispersion,
+            parseFloat,
+            (val) => (params.dispersion = val),
+            (val) => typeof val === 'number' && !Number.isNaN(val), // && val >= 0  && val <= 1,
+            caMutationalDispersionErrorDiv,
+            'Мутационная дисперсия должна быть числом',
+        );
+
         caPopulationSize.addEventListener('change', () => validateCAFields('count'));
-        caNumElites.addEventListener('change', () => validateCAFields('elites'));
+        // caNumElites.addEventListener('change', () => validateCAFields('elites'));
         caNumAccepted.addEventListener('change', () => validateCAFields('accepted'));
     }
 
-    const caepPopulationSize = document.getElementById('caep_population_size');
+    /*const caepPopulationSize = document.getElementById('caep_population_size');
     const caepPopulationSizeErrorDiv = document.getElementById('caep_population_size_error');
     //const caepNumElites = document.getElementById('caep_num_elites');
     const caepNumAccepted = document.getElementById('caep_num_accepted');
@@ -664,7 +775,7 @@ function setupAlgorithmParams() {
         caepPopulationSize.addEventListener('change', () => validateCAEPFields('count'));
         caepNumAccepted.addEventListener('change', () => validateCAEPFields('accepted'));
     }
-
+*/
     // --- Harmony Search ---
     const hsModeSelect = document.getElementById('hs_mode');
     const hsHmcrInput = document.getElementById('hs_hmcr');
@@ -694,9 +805,9 @@ function setupAlgorithmParams() {
         hsModeSelect.addEventListener('change', () => {
             hsState.mode = hsModeSelect.value;
             if (hsState.mode !== 'canonical') {
-                hsState.hmcr = undefined;
+                /* hsState.hmcr = undefined;
                 hsState.par = undefined;
-                hsState.bw = undefined;
+                hsState.bw = undefined;*/
             }
             updateHSModeUI();
         });
@@ -743,7 +854,7 @@ function setupAlgorithmParams() {
     setupGeneralParams();
     setupBBOInputs();
     setupCulturalInputs();
-    setupCAEPInputs();
+    //setupCAEPInputs();
     setupHSInputs();
 }
 
@@ -769,6 +880,7 @@ function switchPlots() {
             { ...state.plotSettings, ...tabData.plotSettings },
             tabData.population,
             tabData.best_solution,
+            tabData.trajectory,
         );
     } else {
         document.getElementById('graph3d').style.display = 'none';
@@ -802,15 +914,35 @@ function setupUI() {
         switchPlots();
     });
 
+    const showTrajectory = document.getElementById('showTrajectory');
+    showTrajectory.textContent = state.plotSettings.showTrajectory
+        ? 'Скрыть траекторию'
+        : 'Показать траекторию';
+
+    showTrajectory.addEventListener('click', () => {
+        state.plotSettings.showTrajectory = !state.plotSettings.showTrajectory;
+        showTrajectory.textContent = state.plotSettings.showTrajectory
+            ? 'Скрыть траекторию'
+            : 'Показать траекторию';
+        if (state.plotSettings.showSurface) {
+            const tabData = getCurrentTabData();
+            addTrajectory(
+                tabData.currentFunction,
+                state.plotSettings.showTrajectory,
+                tabData.trajectory,
+            );
+        }
+    });
+
     const showPopulation = document.getElementById('showPopulation');
     showPopulation.textContent = state.plotSettings.showPopulation
-        ? 'Показать минимум'
+        ? 'Показать решение'
         : 'Показать популяцию';
 
     showPopulation.addEventListener('click', () => {
         state.plotSettings.showPopulation = !state.plotSettings.showPopulation;
         showPopulation.textContent = state.plotSettings.showPopulation
-            ? 'Показать минимум'
+            ? 'Показать решение'
             : 'Показать популяцию';
         //updatePlot();
         let tab = getCurrentTabData();
@@ -822,6 +954,7 @@ function setupUI() {
                 state.plotSettings.showPopulation,
                 tab.plotSettings.pointSize,
             );
+            addTrajectory(tab.currentFunction, state.plotSettings.showTrajectory, tab.trajectory);
         }
     });
 

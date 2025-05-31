@@ -7,23 +7,31 @@
     <title>Визуализация методов эволюционной оптимизации</title>
     <link rel="icon" href="/assets/favicon-CMqfOQ93.ico" type="image/x-icon">
 
-<script type="module" crossorigin src="/assets/index-CJ2593Ox.js"></script>
-<link rel="stylesheet" crossorigin href="/assets/index-CqkeGJRQ.css">
+<script type="module" crossorigin src="/assets/index-W1iiXDBg.js"></script>
+<link rel="stylesheet" crossorigin href="/assets/index-BKTV-lQX.css">
 
 <body>
     <div id="app">
         <div class="container">
             <div class="sidebar shadow-container">
+                <h2>Метод оптимизации</h2>
+                <div class="tabButtons">
+                    <button class="tabButton" id="bbo_tab_button">Биогеографическая
+                        оптимизация</button>
+                    <button class="tabButton" id="cultural_tab_button">Культурная оптимизация</button>
+                    <button class="tabButton" id="harmony_tab_button">Гармонический поиск</button>
+                </div>
+
                 <h2>Настройки</h2>
                 <label for="function">Функция z = f(x, y):</label>
                 <input type="string" id="functionInput" value="x^2 + y^2">
-                <div id="functionError"></div>
+                <div class="errorDiv" id="functionError"></div>
 
                 <select id="functionSelectBuiltin">
                     <option value="">Выбрать тестовую функцию</option>
                 </select>
 
-                <label>Область значений функции</label>
+                <label>Область определения функции</label>
                 <div class="range-container">
                     <div class="range-group">
                         <label for="xRange">X:</label>
@@ -42,40 +50,101 @@
                     </div>
                 </div>
 
-                <label for="population">Размер популяции:</label>
-                <input type="number" id="population" value="50" min="0">
+                <label for="iterationsCountInput">Число итераций:</label>
+                <input type="number" id="iterationsCountInput" placeholder="100" min="0" step="1">
+                <div class="errorDiv" id="iterationsCountInputErrorDiv"></div>
 
-                <label for="iterations">Число итераций:</label>
-                <input type="number" id="iterations" value="10" min="0">
+                <div id="dataBufferControls" style="display: flex; gap: 10px;">
+                    <button id="copyData">Скопировать параметры</button>
+                    <button id="pasteData">Вставить параметры</button>
+                </div>
 
-                <div id="optimizationControls" style="display: flex; gap: 10px;">
+                <div id="optimizationControls" style="display: flex; flex-direction: column; margin:0px;">
                     <button id="startOptimization">Оптимизация</button>
                     <button id="stopOptimization">Остановить</button>
                 </div>
 
-                <div class="tabButtons">
-                    <button class="tabButton" id="bbo_tab_button">Биогеографическая
-                        оптимизация</button>
-                    <button class="tabButton" id="cultural_tab_button">Культурная оптимизация</button>
-                    <button class="tabButton" id="harmony_tab_button">Гармонический поиск</button>
-                </div>
-
                 <div id="bbo_algorithm_tab" class="tab-content">
+                    <label for="bbo_islands_count">Число островов:</label>
+                    <input type="number" id="bbo_islands_count" placeholder="50" min="1" step="1">
+                    <div class="errorDiv" id="bbo_islands_count_error"></div>
 
                     <label for="bbo_mutation_probability">Вероятность мутации:</label>
-                    <input type="number" id="bbo_mutation_probability" value="0.04" min="0" max="0.1" step="0.01">
+                    <input type="number" id="bbo_mutation_probability" placeholder="0.04" min="0" max="1" step="0.01">
+                    <div class="errorDiv" id="bbo_mutation_probability_error"></div>
 
-                    <label for="bbo_blending_rate">alpha:</label>
-                    <input type="number" id="bbo_blending_rate" value="0.1" min="0" max="1">
+                    <label for="bbo_blending_rate">Вес родителя при миграции:</label>
+                    <input type="number" id="bbo_blending_rate" placeholder="0.1" min="0" max="1" step="0.01">
+                    <div class="errorDiv" id="bbo_blending_rate_error"></div>
 
-
+                    <label for="bbo_num_elites">Число элитных особей:</label>
+                    <input type="number" id="bbo_num_elites" placeholder="2" min="0" step="1">
+                    <div class="errorDiv" id="bbo_num_elites_error"></div>
                 </div>
 
                 <div id="cultural_algorithm_tab" class="tab-content">
+                    <label for="ca_population_size">Число особей:</label>
+                    <input type="number" id="ca_population_size" placeholder="50" min="1" step="1">
+                    <div class="errorDiv" id="ca_population_size_error"></div>
 
-                    <label for="cultural_param">Какой-то параметр:</label>
-                    <input type="number" id="cultural_param" value="50" min="0" max="100">
+                    <!--<label for="ca_num_elites">Число элитных индивидов:</label>
+                    <input type="number" id="ca_num_elites" placeholder="5" min="0" step="1">
+                    <div class="errorDiv" id="ca_num_elites_error"></div>-->
 
+                    <label for="ca_num_accepted">Число принятых особей:</label>
+                    <input type="number" id="ca_num_accepted" placeholder="5" min="0" step="1">
+                    <div class="errorDiv" id="ca_num_accepted_error"></div>
+
+                    <label for="ca_belief_space_inertia">Инерция пространства убеждений:</label>
+                    <input type="number" id="ca_belief_space_inertia" placeholder="0.5" min="0" max="1" step="0.01">
+                    <div class="errorDiv" id="ca_belief_space_inertia_error"></div>
+
+                    <label for="ca_mutational_dispersion">Мутационная дисперсия:</label>
+                    <input type="number" id="ca_mutational_dispersion" placeholder="1.0">
+                    <div class="errorDiv" id="ca_mutational_dispersion_error"></div>
+                </div>
+
+                <!--<div id="caep_algorithm_tab" class="tab-content">
+                    <label for="caep_population_size">Число особей:</label>
+                    <input type="number" id="caep_population_size" value="50" min="1" step="1">
+                    <div class="errorDiv" id="caep_population_size_error"></div>
+
+                    <label for="caep_num_accepted">Число принятых индивидов:</label>
+                    <input type="number" id="caep_num_accepted" placeholder="10" min="0" step="1">
+
+                    <label for="caep_mutation_dispersion">Мутационная дисперсия:</label>
+                    <input type="number" id="caep_mutation_dispersion" placeholder="0.1" min="0" max="1" step="0.01">
+
+                    <label for="caep_belief_inertia">Инерция пространства убеждений:</label>
+                    <input type="number" id="caep_belief_inertia" placeholder="0.5" min="0" max="1" step="0.01">
+                </div>-->
+
+                <div id="harmony_algorithm_tab" class="tab-content">
+                    <!-- Harmony Memory Size -->
+                    <label for="hs_hms">Размер памяти гармоний (HMS):</label>
+                    <input type="number" id="hs_hms" placeholder="30" min="1" step="1">
+                    <div class="errorDiv" id="hs_hms_error"></div>
+
+                    <label for="hs_mode">Режим:</label>
+                    <select id="hs_mode">
+                        <option value="canonical" selected>Канонический</option>
+                        <option value="adaptive">Адаптивный</option>
+                    </select>
+
+                    <!-- HMCR -->
+                    <label for="hs_hmcr">Скорость анализа гармонической памяти (HMCR):</label>
+                    <input type="number" id="hs_hmcr" step="0.01" title="Рекомендуется 0.7–0.95" placeholder="0.9">>
+                    <div class="errorDiv" id="hs_hmcr_error"></div>
+
+                    <!-- PAR -->
+                    <label for="hs_par">Cкорость корректировки высоты звучания (PAR):</label>
+                    <input type="number" id="hs_par" step="0.01" title="Рекомендуется 0.1–0.5" placeholder="0.3">>
+                    <div class="errorDiv" id="hs_par_error"></div>
+
+                    <!-- Bandwidth -->
+                    <label for="hs_bw">Дистанционный интервал (BW):</label>
+                    <input type="number" id="hs_bw" step="0.001" title="Обычно 0.001–1.0" placeholder="0.01">
+                    <div class="errorDiv" id="hs_bw_error"></div>
                 </div>
 
             </div>
@@ -88,11 +157,14 @@
                     </div>
                     <div id="convergencePlot" style="display: none;"></div>
 
-                    <button id="showSurface" style="width:100px;">График сходимости</button>
+                    <div style="display: flex; flex-direction: row; gap: 10px;">
+                        <button id="showSurface" style="width:100px;">График сходимости</button>
+                        <button id="showTrajectory" style="width:100px;">Показать траекторию</button>
+                    </div>
                 </div>
 
                 <div class="method-info">
-                    <div id="appState"></div>
+                    <div id="tabStatus"></div>
                     <div id="methodInfoContent">
                     </div>
                 </div>
@@ -101,42 +173,43 @@
 
                     <div style="display: flex; flex-direction: column; gap: 16px;">
                         <div class="range-inline" style="flex-shrink: 0;">
-                            <label for="resolution">Детализация:</label>
-                            <input type="range" id="resolution" min="50" max="250" value="64">
+                            <label for="resolutionInput">Детализация:</label>
+                            <input type="range" id="resolutionInput" min="50" max="250" value="64">
                         </div>
                         <div class="range-inline" style="flex-shrink: 0;">
-                            <label for="pointSize">Размер точки:</label>
-                            <input type="range" id="pointSize" min="0.01" max="1.0" value="0.08" step="0.01">
+                            <label for="pointSizeInput">Размер особей:</label>
+                            <input type="range" id="pointSizeInput" min="0.01" max="1.0" value="0.08" step="0.01">
                         </div>
                     </div>
 
                     <div class="aspect-ratio-group">
                         <div class="range-inline" style="flex-shrink: 0;">
-                            <label for="aspectratioX">X:</label>
-                            <input type="number" id="aspectratioX" value="1" step="0.5">
+                            <label for="aspectratioXInput">X:</label>
+                            <input type="number" id="aspectratioXInput" value="1" step="0.5">
                         </div>
 
                         <div class="range-inline" style="flex-shrink: 0;">
-                            <label for="aspectratioY">Y:</label>
-                            <input type="number" id="aspectratioY" value="1" step="0.5">
+                            <label for="aspectratioYInput">Y:</label>
+                            <input type="number" id="aspectratioYInput" value="1" step="0.5">
                         </div>
 
                         <div class="range-inline" style="flex-shrink: 0;">
-                            <label for="aspectratioZ">Z:</label>
-                            <input type="number" id="aspectratioZ" value="0.5" step="0.5">
+                            <label for="aspectratioZInput">Z:</label>
+                            <input type="number" id="aspectratioZInput" value="0.5" step="0.5">
                         </div>
                     </div>
                     <div style="flex-shrink: 0;">
-                        <button id="showPopulation" style="width:100px;">Показать минимум</button>
+                        <button id="showMode" style="width:100px;">Изменить пропорции</button>
+                    </div>
+
+                    <div style="flex-shrink: 0;">
+                        <button id="showPopulation" style="width:100px;">Показать решение</button>
                     </div>
                     <div style="flex-shrink: 0;">
                         <button id="dropCamera" style="width:100px;">Сбросить камеру</button>
                     </div>
                     <div style="flex-shrink: 0;">
-                        <button id="showGrid" style="width:100px;">Показать сетку</button>
-                    </div>
-                    <div style="flex-shrink: 0;">
-                        <button id="showMode" style="width:100px;">Изменить пропорции</button>
+                        <button id="showGridCheckbox" style="width:100px;">Показать сетку</button>
                     </div>
                 </div>
             </div>

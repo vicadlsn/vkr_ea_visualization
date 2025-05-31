@@ -1,18 +1,17 @@
 import { v4 as uuidv4 } from 'uuid';
-import { initUI, updateMethodInfo, isFormValid } from './ui.js';
-import { connectWebsocket } from './websocket.js';
+import { initUI, updateMethodInfo, updateCurrentStatus, isFormValid } from './ui.js';
+import { createWebsocket } from './websocket.js';
 import { state, getCurrentTabData } from './state.js';
-import { addPoints, updateConvergencePlot } from './plot.js';
+import { addPoints, addTrajectory, updateConvergencePlot } from './plot.js';
 
-let sendMessage = null;
+const wsConnections = new Map();
 
 document.addEventListener('DOMContentLoaded', () => {
     initUI();
-
     state.activeRequests = {};
-    document.getElementById('appState').textContent = `Нет соединения с Websocket сервером...`;
+    getCurrentTabData().currentStatus = `Готово к работе`;
+    updateCurrentStatus();
 
-    sendMessage = connectWebsocket();
     const startButton = document.getElementById('startOptimization');
     const stopButton = document.getElementById('stopOptimization');
 
@@ -22,44 +21,47 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Пожалуйста, исправьте ошибки перед отправкой.');
             return;
         }
+
+        const tab = getCurrentTabData();
+        if (state.activeRequests[tab.method_name]) {
+            alert('Задача уже выполняется в этой вкладке.');
+            return;
+        }
         startOptimization();
     });
 
     stopButton.addEventListener('click', () => {
         const tab = getCurrentTabData();
         const method_id = tab.method_name;
-        const request_id = state.activeRequests[method_id];
-
-        // delete state.activeRequests[method_id];
-
-        sendMessage({
-            action: 'stop',
-            request_id: request_id,
-            method_id: method_id,
-        });
+        stopOptimization(method_id);
+        startButton.disabled = false;
     });
 
-    document.addEventListener('got-websocket-message', handleWebsocketMessage);
     document.addEventListener('function-changed', (e) => {
         const method_id = e.detail?.method_id;
-        const request_id = state.activeRequests[method_id];
-        if (state.activeRequests[method_id]) {
-            delete state.activeRequests[method_id];
-        }
-        sendMessage({
-            action: 'stop',
-            request_id: request_id,
-            method_id: method_id,
-        });
+        stopOptimization(method_id);
+        startButton.disabled = false;
     });
 });
 
 function startOptimization() {
+    if (wsConnections.size >= 5) {
+        alert('Максимум 5 активных задач');
+        return;
+    }
+
     const tab = getCurrentTabData();
     const method_id = tab.method_name;
+
+    if (wsConnections.has(method_id)) {
+        stopOptimization(method_id);
+    }
+
     const request_id = uuidv4();
     state.activeRequests[method_id] = request_id;
+    state.tabsData[method_id].currentStatus = 'Подключение...';
     tab.history = [];
+    tab.trajectory = [];
     tab.total_iterations = tab.iterations_count;
     const boundsX = tab.currentFunction.boundsX.slice().sort((a, b) => a - b);
     const boundsY = tab.currentFunction.boundsY.slice().sort((a, b) => a - b);
@@ -68,43 +70,130 @@ function startOptimization() {
         action: 'start',
         request_id: request_id,
         method_id: method_id,
-        function: tab.currentFunction.function.original,
+        function: tab.currentFunction.function.juliaString,
         lower_bounds: [boundsX[0], boundsY[0]],
         upper_bounds: [boundsX[1], boundsY[1]],
         iterations_count: tab.iterations_count,
         params: tab.params,
     };
+    console.log('Параметры запроса: ', tab.params);
 
-    console.log(tab.params);
-    sendMessage(params);
+    const startTime = performance.now();
+    state.tabsData[method_id].startTime = startTime;
+    const ws = createWebsocket(
+        method_id,
+        () => {
+            getCurrentTabData().currentStatus = 'Соединение установлено';
+            updateCurrentStatus();
+            ws.send(params);
+            //document.getElementById('startOptimization').disabled = true;
+        },
+        (data) => handleWebsocketMessage(data, method_id),
+        () => {
+            stopOptimization(method_id);
+            //document.getElementById('startOptimization').disabled = false;
+            getCurrentTabData().currentStatus = 'Ошибка соединения';
+            updateCurrentStatus();
+        }, // Ошибка
+        () => {
+            stopOptimization(method_id);
+            //document.getElementById('startOptimization').disabled = false;
+            getCurrentTabData().currentStatus = 'Соединение закрыто';
+            updateCurrentStatus();
+        }, // Закрытие
+    );
+    wsConnections.set(method_id, ws);
 }
 
-function handleWebsocketMessage(event) {
-    const data = event.detail.data;
-    console.log('Received message:', data);
+function stopOptimization(method_id) {
+    const ws = wsConnections.get(method_id);
+    const request_id = state.activeRequests[method_id];
+    if (ws && request_id) {
+        ws.send({
+            action: 'stop',
+            request_id: request_id,
+            method_id: method_id,
+        });
+        ws.close();
+    }
+    wsConnections.delete(method_id);
+    delete state.activeRequests[method_id];
+}
 
-    const method_id = data.method_id;
+function handleWebsocketMessage(data, method_id) {
+    console.log('Received message:', data);
     const request_id = data.request_id;
     const action = data.action;
 
-    switch (action) {
-        case 'start_ack':
-            break;
-        case 'stop_ack':
-        case 'error':
-        case 'complete': {
-            if (state.activeRequests[method_id] !== request_id) {
-                break;
-            }
+    if (state.activeRequests[method_id] !== request_id) {
+        console.log('outdated message');
+        return; // устаревше сообщение
+    }
 
+    const elapsedTime = (performance.now() - state.tabsData[method_id].startTime) / 1000;
+
+    switch (action) {
+        case 'start_ack': {
+            console.log(`Start ack received after ${elapsedTime} seconds`);
+            state.tabsData[method_id].currentStatus = 'Оптимизация в процессе';
+            updateCurrentStatus();
+            break;
+        }
+        case 'stop_ack': {
+            console.log(`Stop ack received after ${elapsedTime} seconds`);
+            const ws = wsConnections.get(method_id);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+            }
+            wsConnections.delete(method_id);
             delete state.activeRequests[method_id];
+            state.tabsData[method_id].currentStatus = 'Остановлено';
+            updateCurrentStatus();
             if (method_id === state.currentTab && !state.plotSettings.showSurface) {
                 updateConvergencePlot(
                     document.getElementById('convergencePlot'),
                     state.tabsData[method_id].history,
                 );
             }
-
+            // document.getElementById('startOptimization').disabled = false;
+            break;
+        }
+        case 'error': {
+            console.log(`Error received after ${elapsedTime} seconds: ${data.message}`);
+            const wsError = wsConnections.get(method_id);
+            if (wsError && wsError.readyState === WebSocket.OPEN) {
+                wsError.close();
+            }
+            wsConnections.delete(method_id);
+            delete state.activeRequests[method_id];
+            state.tabsData[method_id].currentStatus = `Ошибка: ${data.message}`;
+            updateCurrentStatus();
+            if (method_id === state.currentTab && !state.plotSettings.showSurface) {
+                updateConvergencePlot(
+                    document.getElementById('convergencePlot'),
+                    state.tabsData[method_id].history,
+                );
+            }
+            //  document.getElementById('startOptimization').disabled = false;
+            break;
+        }
+        case 'complete': {
+            console.log(`Optimization completed after ${elapsedTime} seconds`);
+            const wsComplete = wsConnections.get(method_id);
+            if (wsComplete && wsComplete.readyState === WebSocket.OPEN) {
+                wsComplete.close();
+            }
+            wsConnections.delete(method_id);
+            delete state.activeRequests[method_id];
+            state.tabsData[method_id].currentStatus = 'Оптимизация завершена';
+            updateCurrentStatus();
+            if (method_id === state.currentTab && !state.plotSettings.showSurface) {
+                updateConvergencePlot(
+                    document.getElementById('convergencePlot'),
+                    state.tabsData[method_id].history,
+                );
+            }
+            //    document.getElementById('startOptimization').disabled = false;
             break;
         }
         case 'iteration': {
@@ -116,10 +205,11 @@ function handleWebsocketMessage(event) {
             tab.population = data['population'];
             tab.best_solution = data['best_solution'];
             tab.best_fitness = data['best_fitness'];
-            tab.current_best_solution = data['current_best_solution'];
-            tab.current_best_fitness = data['current_best_fitness'];
             tab.iteration = data['iteration'];
-            tab.history.push(data['current_best_fitness']);
+            tab.history.push(data['best_fitness']);
+            tab.trajectory.push(data['best_solution']);
+            console.log(tab);
+
             if (method_id === state.currentTab) {
                 updateMethodInfo();
                 if (state.plotSettings.showSurface) {
@@ -130,8 +220,14 @@ function handleWebsocketMessage(event) {
                         state.plotSettings.showPopulation,
                         tab.plotSettings.pointSize,
                     );
+                    addTrajectory(
+                        tab.currentFunction,
+                        state.plotSettings.showTrajectory,
+                        tab.trajectory,
+                    );
                 }
             }
+            break;
         }
     }
 }
