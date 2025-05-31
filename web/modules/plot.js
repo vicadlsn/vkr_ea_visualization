@@ -10,7 +10,9 @@ export {
     initConvergencePlot,
     updateConvergencePlot,
     extendConvergencePlot,
+    addTrajectory,
 };
+
 const sceneBackgroundColor = 0xe6e7ee;
 
 function initConvergencePlot(graphDiv) {
@@ -38,7 +40,6 @@ function updateConvergencePlot(graphDiv, trace) {
     const newYValues = trace;
 
     Plotly.update(graphDiv, { x: [newXValues], y: [newYValues] });
-    console.log(newYValues);
 }
 
 function extendConvergencePlot(graphDiv, iteration, bestFitness) {
@@ -83,9 +84,10 @@ let surface,
     arrowY,
     arrowZ,
     axes,
+    trajectoryLine,
     axisTicks = [];
 
-function plotSurface(f, plotSettings, population = [], minimum = undefined) {
+function plotSurface(f, plotSettings, population = [], minimum = undefined, trajectory = []) {
     if (!scene) {
         const container = document.getElementById('graph3d');
         if (!container) return;
@@ -128,7 +130,7 @@ function plotSurface(f, plotSettings, population = [], minimum = undefined) {
         animate();
     }
 
-    updateGraph(f, plotSettings, population, minimum);
+    updateGraph(f, plotSettings, population, minimum, trajectory);
 }
 
 function resetCamera() {
@@ -137,7 +139,7 @@ function resetCamera() {
     controls.target.set(0, 0, 0);
     controls.update();
 }
-function updateGraph(f, plotSettings, population, minimum) {
+function updateGraph(f, plotSettings, population, minimum, trajectory) {
     removePreviousElements();
 
     let { x, y, z } = generateSurfaceData(
@@ -200,6 +202,7 @@ function updateGraph(f, plotSettings, population, minimum) {
         //surfaceGrid.rotateZ(Math.PI);
     }
     addPoints(f, population, minimum, plotSettings.showPopulation, plotSettings.pointSize);
+    addTrajectory(f, plotSettings.showTrajectory, trajectory);
     surface.rotateX(-Math.PI / 2);
     //surface.rotateZ(Math.PI);
 }
@@ -215,6 +218,7 @@ function removePreviousElements() {
         arrowY,
         arrowZ,
         axes,
+        trajectoryLine,
     ];
 
     elements.forEach((element) => {
@@ -342,10 +346,7 @@ function addGridToSurface(x, y, z, scene) {
         }
 
         // Установка вершин в BufferGeometry
-        lineGeometry.setAttribute(
-            "position",
-            new THREE.Float32BufferAttribute(positions, 3)
-        );
+        lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 
         let lineMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
         let line = new THREE.Line(lineGeometry, lineMaterial);
@@ -363,10 +364,7 @@ function addGridToSurface(x, y, z, scene) {
         }
 
         // Установка вершин в BufferGeometry
-        lineGeometry.setAttribute(
-            "position",
-            new THREE.Float32BufferAttribute(positions, 3)
-        );
+        lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 
         let lineMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
         let line = new THREE.Line(lineGeometry, lineMaterial);
@@ -375,8 +373,8 @@ function addGridToSurface(x, y, z, scene) {
 
     scene.add(surfaceGrid);
 }
-*/
 
+*/
 function addGridToSurface(x, y, z, scene) {
     if (surfaceGrid) {
         scene.remove(surfaceGrid);
@@ -444,7 +442,8 @@ function addPoints(f, population, minimum, showPopulation, radius = 0.08, color 
             transparent: true,
             opacity: 0.5,
         });
-        population.slice(1).forEach((p) => {
+        //population.slice(1).forEach((p) => {
+        population.forEach((p) => {
             const zValue = evaluateFunction(f.function, { x: p[0], y: p[1] });
 
             const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
@@ -485,6 +484,24 @@ function addMinimum(f, p, radius = 0.08) {
     // minPoint.rotateX(-Math.PI / 2);
     //minPoint.rotateZ(Math.PI);
     scene.add(minPoint);
+}
+
+function addTrajectory(f, showTrajectory, history, color = 0x0000ff) {
+    scene.remove(trajectoryLine);
+    if (!showTrajectory) return;
+    if (!history || history.length < 2) return;
+    const points = history.map(
+        ([x, y]) =>
+            new THREE.Vector3(
+                x * surface.scale.x,
+                evaluateFunction(f.function, { x, y }) * surface.scale.z,
+                -y * surface.scale.y,
+            ),
+    );
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({ color, linewidth: 2 });
+    trajectoryLine = new THREE.Line(geometry, material);
+    scene.add(trajectoryLine);
 }
 
 function addGrid(scene, length) {

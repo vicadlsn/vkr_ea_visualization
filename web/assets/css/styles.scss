@@ -375,6 +375,14 @@ button:active,
     width: 100px;
     z-index: 10;
 }
+
+#showTrajectory {
+    position: absolute;
+    bottom: 10px;
+    left: 130px;
+    width: 100px;
+    z-index: 10;
+}
 *,
 *::before,
 *::after {

@@ -4,7 +4,7 @@ using HTTP, Base.Threads
 using Logging
 using LoggingExtras
 
-using OptimizationServer
+using OptimizationHandler
 
 include("router.jl")
 using .Router

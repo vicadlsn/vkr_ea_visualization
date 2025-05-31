@@ -1,11 +1,9 @@
 export { createWebsocket };
 
-//const appStatusText = document.getElementById('appState');
-
 function createWebsocket(method_id, onOpen, onMessage, onError, onClose) {
-    //const ws = new WebSocket("ws://" + window.location.origin);
+    const ws = new WebSocket('ws://' + window.location.origin);
 
-    const ws = new WebSocket('ws://localhost:9000');
+    // const ws = new WebSocket('ws://localhost:9000');
 
     ws.onopen = (e) => {
         console.log('WebSocket opened for ${method_id}');

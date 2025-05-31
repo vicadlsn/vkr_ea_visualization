@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { initUI, updateMethodInfo, updateCurrentStatus, isFormValid } from './ui.js';
 import { createWebsocket } from './websocket.js';
 import { state, getCurrentTabData } from './state.js';
-import { addPoints, updateConvergencePlot } from './plot.js';
+import { addPoints, addTrajectory, updateConvergencePlot } from './plot.js';
 
 const wsConnections = new Map();
 
@@ -61,6 +61,7 @@ function startOptimization() {
     state.activeRequests[method_id] = request_id;
     state.tabsData[method_id].currentStatus = 'Подключение...';
     tab.history = [];
+    tab.trajectory = [];
     tab.total_iterations = tab.iterations_count;
     const boundsX = tab.currentFunction.boundsX.slice().sort((a, b) => a - b);
     const boundsY = tab.currentFunction.boundsY.slice().sort((a, b) => a - b);
@@ -69,7 +70,7 @@ function startOptimization() {
         action: 'start',
         request_id: request_id,
         method_id: method_id,
-        function: tab.currentFunction.function.original,
+        function: tab.currentFunction.function.juliaString,
         lower_bounds: [boundsX[0], boundsY[0]],
         upper_bounds: [boundsX[1], boundsY[1]],
         iterations_count: tab.iterations_count,
@@ -77,6 +78,8 @@ function startOptimization() {
     };
     console.log('Параметры запроса: ', tab.params);
 
+    const startTime = performance.now();
+    state.tabsData[method_id].startTime = startTime;
     const ws = createWebsocket(
         method_id,
         () => {
@@ -127,13 +130,17 @@ function handleWebsocketMessage(data, method_id) {
         return; // устаревше сообщение
     }
 
+    const elapsedTime = (performance.now() - state.tabsData[method_id].startTime) / 1000;
+
     switch (action) {
         case 'start_ack': {
+            console.log(`Start ack received after ${elapsedTime} seconds`);
             state.tabsData[method_id].currentStatus = 'Оптимизация в процессе';
             updateCurrentStatus();
             break;
         }
         case 'stop_ack': {
+            console.log(`Stop ack received after ${elapsedTime} seconds`);
             const ws = wsConnections.get(method_id);
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.close();
@@ -152,6 +159,7 @@ function handleWebsocketMessage(data, method_id) {
             break;
         }
         case 'error': {
+            console.log(`Error received after ${elapsedTime} seconds: ${data.message}`);
             const wsError = wsConnections.get(method_id);
             if (wsError && wsError.readyState === WebSocket.OPEN) {
                 wsError.close();
@@ -170,6 +178,7 @@ function handleWebsocketMessage(data, method_id) {
             break;
         }
         case 'complete': {
+            console.log(`Optimization completed after ${elapsedTime} seconds`);
             const wsComplete = wsConnections.get(method_id);
             if (wsComplete && wsComplete.readyState === WebSocket.OPEN) {
                 wsComplete.close();
@@ -196,10 +205,11 @@ function handleWebsocketMessage(data, method_id) {
             tab.population = data['population'];
             tab.best_solution = data['best_solution'];
             tab.best_fitness = data['best_fitness'];
-            tab.current_best_solution = data['current_best_solution'];
-            tab.current_best_fitness = data['current_best_fitness'];
             tab.iteration = data['iteration'];
-            tab.history.push(data['current_best_fitness']);
+            tab.history.push(data['best_fitness']);
+            tab.trajectory.push(data['best_solution']);
+            console.log(tab);
+
             if (method_id === state.currentTab) {
                 updateMethodInfo();
                 if (state.plotSettings.showSurface) {
@@ -209,6 +219,11 @@ function handleWebsocketMessage(data, method_id) {
                         tab.best_solution,
                         state.plotSettings.showPopulation,
                         tab.plotSettings.pointSize,
+                    );
+                    addTrajectory(
+                        tab.currentFunction,
+                        state.plotSettings.showTrajectory,
+                        tab.trajectory,
                     );
                 }
             }

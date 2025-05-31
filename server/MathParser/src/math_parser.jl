@@ -1,13 +1,39 @@
+__precompile__()
+
 using GeneralizedGenerated
 
-const ALLOWED_FUNCTIONS = Set([
-    :+, :-, :*, :/, :^,
-    :sin, :cos, :tan, :asin, :acos, :atan,
-    :sinh, :cosh, :tanh, :asinh, :acosh, :atanh,
-    :sqrt, :cbrt, :abs, :exp, :log, :log10, :log2,
-    :min, :max, :round, :floor, :ceil,
-    :mod, :hypot
-])
+const ALLOWED_FUNCTIONS = Dict(
+    :sqrt   => (1, 1),
+    :cbrt   => (1, 1),
+    :abs    => (1, 1),
+    :exp    => (1, 1),
+    :log    => (1, 2),  # log(x) или log(base, x)
+    :log10  => (1, 1),
+    :log2   => (1, 1),
+
+    :sin    => (1, 1),
+    :cos    => (1, 1),
+    :tan    => (1, 1),
+    :asin   => (1, 1),
+    :acos   => (1, 1),
+    :atan   => (1, 1),
+    :sinh   => (1, 1),
+    :cosh   => (1, 1),
+    :tanh   => (1, 1),
+    :asinh  => (1, 1),
+    :acosh  => (1, 1),
+    :atanh  => (1, 1),
+    
+    :round  => (1, 1),
+    :floor  => (1, 1),
+    :ceil   => (1, 1),
+    :hypot  => (1, typemax(Int)),
+    :min    => (1, typemax(Int)),
+    :max    => (1, typemax(Int)),
+    :mod    => (2, 2),
+)
+
+const ALLOWED_OPERATORS = Set([:+, :-, :*, :/, :^])
 
 const ALLOWED_VARIABLES = Set([:x, :y, :pi, :π, :PI, :e, :E])
 
@@ -16,21 +42,25 @@ function validate_expr(expr)
         return expr in ALLOWED_VARIABLES
     elseif expr isa Number
         return true
-    elseif expr isa Expr
-        if expr.head == :call
-            f = expr.args[1]
-            if f isa Symbol && f in ALLOWED_FUNCTIONS
-            #if f in ALLOWED_FUNCTIONS
-                return all(validate_expr, expr.args[2:end])
+    elseif expr isa Expr && expr.head == :call
+        f = expr.args[1]
+        args = expr.args[2:end]
+
+        if f isa Symbol
+            if f in ALLOWED_OPERATORS
+                return all(validate_expr, args)
+            elseif haskey(ALLOWED_FUNCTIONS, f)
+                minargs, maxargs = ALLOWED_FUNCTIONS[f]
+                nargs = length(args)
+                return (nargs >= minargs && nargs <= maxargs) &&
+                       all(validate_expr, args)
             end
-        else
-            return false
         end
+        return false
     else
         return false
     end
 end
-
 function replace_constants(expr)
     if expr isa Symbol
         if expr == :e || expr == :E

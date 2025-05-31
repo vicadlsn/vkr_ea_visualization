@@ -4,189 +4,128 @@ using Random
 
 export cultural_algorithm
 
-# Инициализация популяции
+# Инициализация популяции: dim × population_size
 function initialize_population(dim, population_size, lower_bound, upper_bound)
-    if any(lower_bound .>= upper_bound)
-        error("Неверные границы")
-    end
-    if population_size < 1
-        error("Неверный размер популяции")
-    end
-
-    return [[lower_bound[j] + (upper_bound[j] - lower_bound[j]) * rand() for j in 1:dim] for _ in 1:population_size]
+    rand_matrix = rand(dim, population_size)
+    return lower_bound .+ (upper_bound .- lower_bound) .* rand_matrix
 end
 
-# Оценка популяции
+# Оценка приспособленности популяции
 function evaluate_population(population, cost_func)
-    return [cost_func(ind) for ind in population]
+    return [cost_func(individual) for individual in eachcol(population)]
 end
 
-# Сортировка популяции по пригодности
-function sort_population(population, fitness)
+# Сортировка популяции по значению функции
+function sort_population(population::Matrix{Float64}, fitness::Vector{Float64})
     indices = sortperm(fitness)
-    return population[indices], fitness[indices]
+    return population[:, indices], fitness[indices]
 end
 
-# Функция принятия: выбор k лучших особей
-function accept(population, fitness, k)
-    k = min(k, length(population))
-    indices = sortperm(fitness)[1:k]
-    return population[indices], fitness[indices]
-end
-
-# Инициализация пространства убеждений
-function init_belief_space(population, fitness, lower_bound, upper_bound, dim)
-    best_idx = argmin(fitness)
-    situational = (individual=copy(population[best_idx]), fitness=fitness[best_idx])
-    normative = (
-        intervals=[[lower_bound[j], upper_bound[j]] for j in 1:dim],
-        L=[Inf for _ in 1:dim],
-        U=[Inf for _ in 1:dim]
-    )
-    return situational, normative
-end
-
-# Обновление ситуативных знаний
-function update_situational(situational, accepted, accepted_fitness)
-    best_idx = argmin(accepted_fitness)
-    if accepted_fitness[best_idx] < situational.fitness
-        return (individual=copy(accepted[best_idx]), fitness=accepted_fitness[best_idx])
+# Обновление belief space с инерцией inertia
+function update_belief_space!(belief_space::Vector{Tuple{Float64, Float64}},
+                              accepted::Matrix{Float64}, inertia::Float64)
+    dim = size(accepted, 1)
+    for i in 1:dim
+        values = accepted[i, :]
+        x_min = minimum(values)
+        x_max = maximum(values)
+        b_min, b_max = belief_space[i]
+        new_min = inertia * b_min + (1 - inertia) * x_min
+        new_max = inertia * b_max + (1 - inertia) * x_max
+        belief_space[i] = (new_min, new_max)
     end
-    return situational
 end
 
-# Обновление нормативных знаний
-function update_normative(normative, accepted, accepted_fitness, dim)
-    intervals = normative.intervals
-    L = normative.L
-    U = normative.U
-    
-    new_intervals = deepcopy(intervals)
-    new_L = copy(L)
-    new_U = copy(U)
-    
-    for j in 1:dim
-        x_min_j, x_max_j = intervals[j]
-        L_j, U_j = L[j], U[j]
-        
-        for l in eachindex(accepted)
-            x_l_j = accepted[l][j]
-            f_l = accepted_fitness[l]
-            
-            # Обновление x_min_j и L_j
-            if x_l_j <= x_min_j || f_l < L_j
-                x_min_j = x_l_j
-                L_j = f_l
-            end
-            # Обновление x_max_j и U_j
-            if x_l_j >= x_max_j || f_l < U_j
-                x_max_j = x_l_j
-                U_j = f_l
-            end
+# Корректировка особи с учётом belief space
+function adjust_solution_CAEP(solution::Vector{Float64}, belief_space, lower_bound, upper_bound, dispersion)
+    dim = length(solution)
+    new_solution = copy(solution)
+    for k in 1:dim
+        Bmin, Bmax = belief_space[k]
+        delta = 0.0
+        if solution[k] < Bmin
+            delta = Bmin - solution[k]
+        elseif solution[k] > Bmax
+            delta = Bmax - solution[k]
         end
-        
-        new_intervals[j] = [min(x_min_j, x_max_j), max(x_min_j, x_max_j)]
-        new_L[j] = L_j
-        new_U[j] = U_j
+        r = randn()
+        new_solution[k] += r * dispersion^0.5 + delta
+        new_solution[k] = clamp(new_solution[k], lower_bound[k], upper_bound[k])
     end
-    
-    return (intervals=new_intervals, L=new_L, U=new_U)
+    return new_solution
 end
 
-# Функция влияния: мутация с учетом ситуативных и нормативных знаний
-function influence(individual, situational, normative, sigma, dim)
-    new_individual = copy(individual)
-    
-    for j in 1:dim
-        s_j = situational.individual[j]
-        x_min_j, x_max_j = normative.intervals[j]
-        size_j = x_max_j - x_min_j
-        
-        if individual[j] < s_j
-            new_individual[j] += abs(size_j * randn() * sigma)
-        elseif individual[j] > s_j
-            new_individual[j] -= abs(size_j * randn() * sigma)
-        else
-            new_individual[j] += size_j * randn() * sigma
-        end
-
-        new_individual[j] = clamp(new_individual[j], x_min_j, x_max_j)
-
+# Бинарный турнир для выбора из объединённой популяции
+function binary_tournament(combined::Matrix{Float64}, fitness::Vector{Float64}, population_size::Int)
+    dim = size(combined, 1)
+    new_population = Matrix{Float64}(undef, dim, population_size)
+    for i in 1:population_size
+        i1, i2 = rand(1:length(fitness), 2)
+        winner = fitness[i1] < fitness[i2] ? i1 : i2
+        new_population[:, i] = combined[:, winner]
     end
-    
-    return new_individual
-end
-
-# Эволюция популяции
-function evolve(population, situational, normative, num_elites, population_size, dim, sigma)
-    new_population = Vector{Vector{Float64}}(undef, population_size)
-    
-    # Лучшие особи
-    for i in 1:num_elites
-        new_population[i] = copy(population[i])
-    end
-    
-    # Пространство убеждений влияет на популяцию
-    for i in (num_elites+1):population_size
-        new_population[i] = influence(population[i], situational, normative, sigma, dim)
-    end
-    
     return new_population
 end
 
-# Главная функция CA
-function cultural_algorithm(cancel_flag::Ref{Bool},  objective_function, dim, lower_bound, upper_bound, max_generations, population_size; num_elites=2, num_accepted=10,send_func=nothing,sigma=1,)
-    # Валидация 
-    if population_size < num_elites || num_accepted > population_size || dim != length(lower_bound) || dim != length(upper_bound)
-        error("Неверные параметры: population_size=$population_size, num_elites=$num_elites, num_accepted=$num_accepted, dim=$dim, bounds_length=$(length(lower_bound))")
-    end
-    
-    # 1. Инициализация популяции
+#CAEP
+function cultural_algorithm(cancel_flag::Ref{Bool}, objective_function, dim::Int, lower_bound::Vector{Float64}, upper_bound::Vector{Float64}, max_generations::Int, population_size::Int;
+num_accepted=round(Int, 0.2 * population_size), num_elites=2, inertia=0.5, dispersion=1.0, send_func=nothing, scale_factor=1, target_fitness=-Inf)
+    num_elites = min(num_elites, population_size)
     population = initialize_population(dim, population_size, lower_bound, upper_bound)
     fitness = evaluate_population(population, objective_function)
     population, fitness = sort_population(population, fitness)
-    
-    # 2. Инициализация пространства убеждений
-    situational, normative = init_belief_space(population, fitness, lower_bound, upper_bound, dim)
 
-    best_fitness = situational.fitness
-    best_solution = situational.individual
-    current_best_fitness = situational.fitness
-    current_best_solution = situational.individual
-    
-    # Основной цикл
+    best_solution, best_fitness = copy(population[:, 1]), fitness[1]
+
+    # Инициализация belief space
+    belief_space = [(lower_bound[i], upper_bound[i]) for i in 1:dim]
+
     for generation in 1:max_generations
         if cancel_flag[]
             @info "Cultural Algorithm cancelled"
             return best_solution, best_fitness
         end
-        
-        # 3. Обновление пространства убеждений 
-        accepted, accepted_fitness = accept(population, fitness, num_accepted)
-        situational = update_situational(situational, accepted, accepted_fitness)
-        normative = update_normative(normative, accepted, accepted_fitness, dim)
 
-        # 4. Эволюция популяции
-        population = evolve(population, situational, normative, num_elites, population_size, dim, sigma)
-
-        # 5. Оценка популяции
-        fitness = evaluate_population(population, objective_function)
-        population, fitness = sort_population(population, fitness)
-        
-        current_best_fitness = situational.fitness
-        current_best_solution = situational.individual
-        if current_best_fitness < best_fitness
-            best_fitness = current_best_fitness
-            best_solution = current_best_solution
+        if best_fitness <= target_fitness
+            if send_func !== nothing
+                send_func(generation, best_fitness, best_solution, [population[:, i] for i in 1:population_size])
+            end
+            return best_solution, best_fitness
         end
 
-        # Отправка данных
+        # Мутация популяции с учётом belief space
+        new_population = Matrix{Float64}(undef, dim, population_size)
+        for i in 1:population_size
+            new_population[:, i] = adjust_solution_CAEP(population[:, i], belief_space,
+                                                        lower_bound, upper_bound, dispersion)
+        end
+        
+        population = new_population
+        fitness = evaluate_population(new_population, objective_function)
+
+        #combined = hcat(population, new_population)
+        #combined_fitness = vcat(fitness, new_fitness)
+        #population = binary_tournament(combined, combined_fitness, population_size)
+        #fitness = evaluate_population(population, objective_function)
+        
+        population, fitness = sort_population(population, fitness)
+
+        # Отбор лучших решений
+        accepted = population[:, 1:num_accepted]
+        # Обновление belief space с инерцией
+        update_belief_space!(belief_space, accepted, inertia)
+        
+        if fitness[1] < best_fitness
+            best_fitness = fitness[1]
+            best_solution = copy(population[:, 1])
+        end
+
         if send_func !== nothing
-            send_func(generation, best_fitness, best_solution, current_best_fitness, current_best_solution, population)
+            send_func(generation, best_fitness, best_solution, [population[:, i] for i in 1:population_size])
         end
     end
-    
+
     return best_solution, best_fitness
 end
 
-end # CA
+end  # module CA

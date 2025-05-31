@@ -7,10 +7,12 @@ using Base.Threads
 using UUIDs
 using PrecompileTools
 using OptimizationAlgorithms, MathParser
+using BenchmarkTools
 
 export handle_ws_client
 
 const DIMENSION = 2
+
 
 function cleanup_task(task::Task, cancel_flag::Ref{Bool})
     if !cancel_flag[]
@@ -43,7 +45,7 @@ function handle_ws_client(http::HTTP.Stream)
         if !isnothing(optimization_task[])
             cleanup_task(optimization_task[], cancel_flag)
         end
-        @info "WebSocket connection closed" client_id=client_id
+       # @info "WebSocket connection closed" client_id=client_id
     end
 end
 
@@ -90,6 +92,12 @@ function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimization_
         if data["action"] == "start"
             @info "Start optimization request" client_id=client_id request_id=request_id method_id=method_id
 
+            if !isnothing(optimization_task[])
+                @info "Previous task still running. Cancelling request." client_id=client_id request_id=request_id method_id=method_id
+                send_error(ws, client_id, request_id, "Previous task is in process")
+                continue 
+            end
+
             # Валидация параметров??
             if !validate_start_params(data)
                 @error "Invalid start parameters" data=data client_id=client_id request_id=request_id method_id=method_id
@@ -120,23 +128,18 @@ function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimization_
             params["lower_bounds"] = data["lower_bounds"]
             params["upper_bounds"] = data["upper_bounds"]
             params["iterations_count"] = data["iterations_count"]
-            
-            if !isnothing(optimization_task[])
-                @info "Cancelling previous task" client_id=client_id request_id=request_id method_id=method_id
-                cancel_flag[] = true
-                wait(optimization_task[])
-            end
+
+            HTTP.WebSockets.send(ws, JSON.json(Dict(
+                "action" => "start_ack",
+                "client_id" => client_id,
+                "request_id" => request_id,
+                "method_id" => method_id,
+                "status" => "ok"
+            )))
 
             cancel_flag[] = false
             optimization_task[] = @async begin
                 try
-                    HTTP.WebSockets.send(ws, JSON.json(Dict(
-                        "action" => "start_ack",
-                        "client_id" => client_id,
-                        "request_id" => request_id,
-                        "method_id" => method_id,
-                        "status" => "ok"
-                    )))
                     t_opt_start = time()
                     optimize(ws, f, method_id, client_id, request_id, params, cancel_flag)
                     t_opt = time() - t_opt_start
@@ -159,7 +162,6 @@ function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimization_
                     "client_id" => client_id,
                     "request_id" => request_id,
                     "method_id" => method_id,
-                    "status" => "ok"
                 )))
                 optimization_task[] = nothing
                 cancel_flag[] = false
@@ -178,7 +180,7 @@ function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimization_
             @error "Unhandled error in WS message handler" error=e client_id=client_id method_id=method_id
         end
     end
-    @info "WebSocket connection closed" client_id=client_idmethod_id=method_id
+    @info "WebSocket connection closed" client_id=client_id method_id=method_id
 
 end
 
@@ -201,6 +203,132 @@ function validate_start_params(data)
     return true
 end
 
+function parse_param(params, key, ::Type{T}) where T
+    if !haskey(params, key)
+        return nothing
+    end
+    val = params[key]
+    try
+        return T(val)
+    catch
+        return nothing
+    end
+end
+
+function validate_bbo_params(params)
+    required = [
+        ("iterations_count", Int),
+        ("islands_count", Int),
+        ("mutation_probability", Float64),
+        ("blending_rate", Float64),
+        ("num_elites", Int)
+    ]
+    for (key, typ) in required
+        val = parse_param(params, key, typ)
+        if val === nothing
+            return false, "Missing or invalid parameter: $key"
+        end
+        params[key] = val
+    end
+    if params["iterations_count"] < 1
+        return false, "iterations_count must be >= 1"
+    end
+    if params["islands_count"] < 1
+        return false, "islands_count must be >= 1"
+    end
+    if !(0.0 <= params["mutation_probability"] <= 1.0)
+        return false, "mutation_probability must be in [0, 1]"
+    end
+    if !(0.0 <= params["blending_rate"] <= 1.0)
+        return false, "blending_rate must be in [0, 1]"
+    end
+    if params["num_elites"] < 0
+        return false, "num_elites must be >= 0"
+    end
+    if params["islands_count"] < params["num_elites"]
+        return false, "islands_count must be >= num_elites"
+    end
+    return true, ""
+end
+
+function validate_cultural_params(params)
+    required = [
+        ("population_size", Int),
+        #("num_elites", Int),
+        ("num_accepted", Int),
+        ("iterations_count", Int),
+        #("scale_factor", Float64)
+        ("inertia", Float64),
+        ("dispersion", Float64)
+    ]
+    for (key, typ) in required
+        val = parse_param(params, key, typ)
+        if val === nothing
+            return false, "Missing or invalid parameter: $key"
+        end
+        params[key] = val
+    end
+    if params["population_size"] < 1 || params["iterations_count"] < 1
+        return false, "population_size and iterations_count must be >= 1"
+    end
+    #if params["num_elites"] < 0
+    #    return false, "num_elites must be >= 0"
+    #end
+    if params["num_accepted"] < 1
+        return false, "num_accepted must be >= 1"
+    end
+    #if params["num_elites"]> params["population_size"]
+    #    return false, "num_elites must be <= population_size"
+    #end
+    if params["num_accepted"] > params["population_size"]
+        return false, "num_accepted must be <= population_size"
+    end
+    #if params["scale_factor"] < 0 #|| params["scale_factor"] > 1
+    #    return false, "scale_factor must be >= 0"
+    #end
+
+    if  params["inertia"] < 0 || params["inertia"] > 1
+            return false, "inertia must be in [0, 1]"
+    end
+
+    return true, ""
+end
+
+function validate_harmony_params(params)
+    required = [
+        ("hms", Int),
+        ("iterations_count", Int)
+    ]
+    for (key, typ) in required
+        val = parse_param(params, key, typ)
+        if val === nothing
+            return false, "Missing or invalid parameter: $key"
+        end
+        params[key] = val
+    end
+    if params["hms"] < 1 || params["iterations_count"] < 1
+        return false, "hms and iterations_count must be >= 1"
+    end
+    mode = get(params, "mode", "canonical")
+    if mode == "canonical"
+        for (key, typ) in [("hmcr", Float64), ("par", Float64), ("bw", Float64)]
+            val = parse_param(params, key, typ)
+            if val === nothing
+                return false, "Missing or invalid parameter for canonical mode: $key"
+            end
+            params[key] = val
+        end
+        if !(0.0 <= params["hmcr"] <= 1.0) || !(0.0 <= params["par"] <= 1.0) || params["bw"] < 0
+            return false, "hmcr/par must be in [0,1], bw >= 0"
+        end
+    elseif mode == "adaptive"
+        return true, ""
+    else
+        return false, "Unknown Harmony Search mode: $mode"
+    end
+    return true, ""
+end
+
 function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String, request_id::String, params::Dict{String, Any}, cancel_flag::Ref{Bool})
     send_iter = send_optimization_data_closure(ws, client_id, request_id, method_id, cancel_flag)
 
@@ -210,24 +338,53 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
     @info "Starting optimization" method_id=method_id
     @info "Parameters:" method_id=method_id params=JSON.json(params)
     best_solution, best_fitness = nothing, nothing
+    allocated = nothing
     try
         if method_id == "bbo"
-            best_solution, best_fitness = OptimizationAlgorithms.bbo(cancel_flag, f_v, DIMENSION,
-                lower_bounds, upper_bounds, params["iterations_count"], params["islands_count"];
-                mutation_probability=params["mutation_probability"], blending_rate=params["blending_rate"],
-                num_elites=params["num_elites"], send_func=send_iter
-            )
-        elseif method_id == "cultural"
-            population_size = params["population_size"]
+            valid, msg = validate_bbo_params(params)
+            if !valid
+                send_error(ws, client_id, request_id, "BBO params error: $msg")
+                return
+            end
+            iterations_count = params["iterations_count"]
+            islands_count = params["islands_count"]
+            mutation_probability = params["mutation_probability"]
+            blending_rate = params["blending_rate"]
             num_elites = params["num_elites"]
+            
+            allocated = @allocated begin
+                best_solution, best_fitness = OptimizationAlgorithms.bbo(cancel_flag, f_v, DIMENSION,
+                    lower_bounds, upper_bounds, iterations_count, islands_count;
+                    mutation_probability=mutation_probability, blending_rate=blending_rate,
+                    num_elites=num_elites, send_func=send_iter
+                )
+            end
+        elseif method_id == "cultural"
+            valid, msg = validate_cultural_params(params)
+            if !valid
+                send_error(ws, client_id, request_id, "Cultural params error: $msg")
+                return
+            end
+            population_size = params["population_size"]
+           # num_elites = params["num_elites"]
+            inertia = params["inertia"]
+            dispersion = params["dispersion"]
             num_accepted = params["num_accepted"]
             dim = DIMENSION
             max_iters = params["iterations_count"]
-            best_solution, best_fitness = OptimizationAlgorithms.cultural_algorithm(cancel_flag,
-                f_v, dim, lower_bounds, upper_bounds, max_iters, population_size;
-                num_elites=num_elites, num_accepted=num_accepted, send_func=send_iter
-            )
+            #scale_factor = params["scale_factor"]
+            allocated = @allocated begin
+                best_solution, best_fitness = OptimizationAlgorithms.cultural_algorithm(cancel_flag,
+                    f_v, dim, lower_bounds, upper_bounds, max_iters, population_size;
+                    num_accepted=num_accepted, send_func=send_iter, inertia=inertia, dispersion=dispersion
+                )# num_elites=num_elites,  scale_factor=scale_factor, 
+            end
         elseif method_id == "harmony"
+            valid, msg = validate_harmony_params(params)
+            if !valid
+               send_error(ws, client_id, request_id, "Harmony params error: $msg")
+                return
+            end
             dim = DIMENSION
             hms = params["hms"]
             max_iters = params["iterations_count"]
@@ -236,15 +393,19 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
                 hmcr = params["hmcr"]
                 par = params["par"]
                 bw = params["bw"]
-                best_solution, best_fitness = OptimizationAlgorithms.harmony_search(cancel_flag,
-                    f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
-                    hmcr=hmcr, par=par, bw=bw, mode="canonical", send_func=send_iter
-                )
+                allocated = @allocated begin
+                    best_solution, best_fitness = OptimizationAlgorithms.harmony_search(cancel_flag,
+                        f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
+                        hmcr=hmcr, par=par, bw=bw, mode="canonical", send_func=send_iter
+                    )
+                end
             elseif mode == "adaptive"
-                best_solution, best_fitness = OptimizationAlgorithms.harmony_search(cancel_flag,
-                    f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
-                    mode="adaptive", send_func=send_iter
-                )
+                allocated = @allocated begin
+                    best_solution, best_fitness = OptimizationAlgorithms.harmony_search(cancel_flag,
+                        f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
+                        mode="adaptive", send_func=send_iter
+                    )
+                end
             else
                 @error "Unknown HS mode" mode=mode
                 send_error(ws, client_id, request_id, "Unknown Harmony Search mode: $mode")
@@ -255,7 +416,7 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
             send_error(ws, client_id, request_id, "Unknown method")
             return
         end
-        @info "Optimization completed" client_id=client_id request_id=request_id method_id=method_id best_solution=string(best_solution) best_fitness=best_fitness
+        @info "Optimization completed" client_id=client_id request_id=request_id method_id=method_id best_solution=string(best_solution) best_fitness=best_fitness allocated_bytes=allocated
         if !cancel_flag[]
             HTTP.WebSockets.send(ws, JSON.json(Dict(
                 "action" => "complete",
@@ -266,7 +427,6 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
                 "final_fitness" => best_fitness,
                 "iterations" => params["iterations_count"]
             )))
-            @info "Optimization completed" method_id=method_id
         end
     catch e
         @error "Optimization error" error=e client_id=client_id request_id=request_id method_id=method_id
@@ -283,7 +443,6 @@ function send_optimization_data_closure(
 )
     return function (
         iteration, best_fitness, best_solution,
-        current_best_fitness, current_best_solution,
         population
     )
         if ws === nothing || ws.writeclosed
@@ -302,9 +461,7 @@ function send_optimization_data_closure(
                 "iteration" => iteration,
                 "population" => population,
                 "best_fitness" => best_fitness,
-                "best_solution" => best_solution,
-                "current_best_fitness" => current_best_fitness,
-                "current_best_solution" => current_best_solution
+                "best_solution" => best_solution
             ))
             HTTP.WebSockets.send(ws, json_data)
             @debug "Sent iteration data" method_id=method_id iteration=iteration
@@ -330,7 +487,7 @@ function warmup()
     cancel_flag = Ref{Bool}(false)
     
     # Функция для отправки данных (пустая, чтобы минимизировать выполнение)
-    send_func = (iteration, best_fitness, best_solution, current_best_fitness, current_best_solution, population) -> nothing
+    send_func = (iteration, best_fitness, best_solution, population) -> nothing
     
     # Вызов методов оптимизации
     OptimizationAlgorithms.bbo(
@@ -365,5 +522,4 @@ end
         warmup()
     end
 end
-
 end

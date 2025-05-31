@@ -1,4 +1,6 @@
-module OptimizationServer
+module OptimizationHandler
+
+using PrecompileTools
 
 include("ws_handler.jl")
 using .WSHandler
