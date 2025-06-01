@@ -180,7 +180,7 @@ function transformSafeExpression(node) {
         if (node.isFunctionNode) {
             const name = node.name;
 
-            // log(x, base) -> log(base, x)
+            // log(x, base) в log(base, x)
             if (name === 'log' && node.args.length === 2) {
                 return new FunctionNode('log', [node.args[1], node.args[0]]);
             }

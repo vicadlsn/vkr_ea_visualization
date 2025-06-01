@@ -33,10 +33,8 @@ function sort_population(population, fitness)
 end
 
 function bbo(cancel_flag::Ref{Bool}, objective_function, dim, lower_bound, upper_bound, max_generations, population_size; mutation_probability=0.04, blending_rate=0.1, num_elites=2, send_func=nothing, target_fitness=-Inf)
-    # Инициализация популяции
     population = initialize_population(dim, population_size, lower_bound, upper_bound)
     fitness = evaluate_population(population, objective_function)
-    # Сортировка популяции по пригодности
     population, fitness = sort_population(population, fitness)
 
     best_fitness = fitness[1]
@@ -69,7 +67,7 @@ function bbo(cancel_flag::Ref{Bool}, objective_function, dim, lower_bound, upper
         new_population = copy(population)
 
         for i in 1:population_size
-            # Оператор миграции (с рулеточным отбором)
+            # Оператор миграции с рулеточным отбором
             for j in 1:dim
                 if rand() < lambda[i]
                     selected_index = roulette_wheel_selection(mu)
@@ -98,10 +96,8 @@ function bbo(cancel_flag::Ref{Bool}, objective_function, dim, lower_bound, upper
             fitness[idx] = elite_fitness[k]
         end
 
-        # Сортировка популяции по пригодности
         population, fitness = sort_population(population, fitness)
 
-        # Сохранение лучшего решения
         if fitness[1] < best_fitness
             best_fitness = fitness[1]
             best_solution = copy(population[:, 1])

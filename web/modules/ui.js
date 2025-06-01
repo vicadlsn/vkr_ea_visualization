@@ -27,8 +27,6 @@ function restoreStateFunctionChange() {
     tab.population = [];
     tab.history = [];
     tab.trajectory = [];
-    // tab.current_best_solution = undefined;
-    // tab.current_best_fitness = undefined;
     tab.best_solution = undefined;
     tab.best_fitness = undefined;
     tab.iteration = 0;
@@ -44,16 +42,6 @@ function updateMethodInfo() {
     const tabData = getCurrentTabData();
     const func = getCurrentTabDataFunction().function.original;
 
-    /*const bestCurrentSolution =
-        Array.isArray(tabData.current_best_solution) && tabData.current_best_solution.length >= 2
-            ? `(${tabData.current_best_solution[0].toFixed(4)}, ${tabData.current_best_solution[1].toFixed(4)})`
-            : '';
-*/
-    /*const bestCurrentFitness =
-        typeof tabData.current_best_fitness === 'number'
-            ? tabData.current_best_fitness.toFixed(4)
-            : '';
-*/
     const bestSolution =
         Array.isArray(tabData.best_solution) && tabData.best_solution.length >= 2
             ? `(${tabData.best_solution[0].toFixed(4)}, ${tabData.best_solution[1].toFixed(4)})`
@@ -150,14 +138,9 @@ const iterationsCountInputErrorDiv = document.getElementById('iterationsCountInp
 function updateSettingsUI() {
     const tabData = getCurrentTabData();
     functionSelectBuiltin.value = tabData.currentFunction.builtin;
-    /*document.getElementById("showGrid").checked =
-        tabData.plotSettings.showGrid;*/
+
     // Параметры графика
     resolutionInput.value = tabData.plotSettings.resolution;
-    /*document.getElementById("showPopulation").checked =
-        tabData.plotSettings.showPopulation;*/
-    /*document.getElementById("equalScale").checked =
-        tabData.plotSettings.equalScale;*/
     pointSizeInput.value = tabData.plotSettings.pointSize;
     aspectratioXInput.value = tabData.plotSettings.aspectratioX;
     aspectratioYInput.value = tabData.plotSettings.aspectratioY;
@@ -588,8 +571,6 @@ function setupAlgorithmParams() {
     // --- Cultural ---
     const caPopulationSize = document.getElementById('ca_population_size');
     const caPopulationSizeErrorDiv = document.getElementById('ca_population_size_error');
-    // const caNumElites = document.getElementById('ca_num_elites');
-    // const caNumElitesErrorDiv = document.getElementById('ca_num_elites_error');
 
     const caNumAccepted = document.getElementById('ca_num_accepted');
     const caNumAcceptedErrorDiv = document.getElementById('ca_num_accepted_error');
@@ -607,14 +588,12 @@ function setupAlgorithmParams() {
         const params = culturalState.params;
 
         caPopulationSize.value = params.population_size;
-        // caNumElites.value = params.num_elites;
         caNumAccepted.value = params.num_accepted;
         caBeliefSpaceInertia.value = params.inertia;
         caMutationalDispersion.value = params.dispersion;
 
         function validateCAFields(source) {
             const count = parseInt(caPopulationSize.value);
-            //  const elites = parseInt(caNumElites.value);
             const accepted = parseInt(caNumAccepted.value);
             let valid = true;
 
@@ -629,11 +608,7 @@ function setupAlgorithmParams() {
                     );
                 }
                 valid = false;
-            } else if (
-                // (Number.isInteger(elites) && elites > count) ||
-                Number.isInteger(accepted) &&
-                accepted > count
-            ) {
+            } else if (Number.isInteger(accepted) && accepted > count) {
                 if (source === 'count') {
                     setInput(
                         caPopulationSize,
@@ -647,21 +622,6 @@ function setupAlgorithmParams() {
                 setInput(caPopulationSize, true, caPopulationSizeErrorDiv);
             }
 
-            // Проверка элитных особей
-            /*if (!Number.isInteger(elites) || elites < 0 || elites > count) {
-                if (source === 'elites') {
-                    setInput(
-                        caNumElites,
-                        false,
-                        caNumElitesErrorDiv,
-                        'Число элитных особей должно быть неотрицательным и не больше числа всех особей',
-                    );
-                }
-                valid = false;
-            } else {
-                setInput(caNumElites, true, caNumElitesErrorDiv);
-            }
-*/
             // Проверка принятых особей
             if (!Number.isInteger(accepted) || accepted < 1 || accepted > count) {
                 if (source === 'accepted') {
@@ -697,85 +657,15 @@ function setupAlgorithmParams() {
             caMutationalDispersion,
             parseFloat,
             (val) => (params.dispersion = val),
-            (val) => typeof val === 'number' && !Number.isNaN(val), // && val >= 0  && val <= 1,
+            (val) => typeof val === 'number' && !Number.isNaN(val),
             caMutationalDispersionErrorDiv,
             'Мутационная дисперсия должна быть числом',
         );
 
         caPopulationSize.addEventListener('change', () => validateCAFields('count'));
-        // caNumElites.addEventListener('change', () => validateCAFields('elites'));
         caNumAccepted.addEventListener('change', () => validateCAFields('accepted'));
     }
 
-    /*const caepPopulationSize = document.getElementById('caep_population_size');
-    const caepPopulationSizeErrorDiv = document.getElementById('caep_population_size_error');
-    //const caepNumElites = document.getElementById('caep_num_elites');
-    const caepNumAccepted = document.getElementById('caep_num_accepted');
-    // const caepNumElitesErrorDiv = document.getElementById('caep_num_elites_error');
-    const caepNumAcceptedErrorDiv = document.getElementById('caep_num_accepted_error');
-
-    function setupCAEPInputs() {
-        const params = state.tabsData[METHOD_NAMES.caep].params;
-
-        caepPopulationSize.value = params.population_size;
-        caepNumAccepted.value = params.num_accepted;
-
-        function validateCAEPFields(source) {
-            const count = parseInt(caepPopulationSize.value);
-            const accepted = parseInt(caepNumAccepted.value);
-
-            let valid = true;
-
-            // Проверка count
-            if (!Number.isInteger(count) || count <= 0) {
-                if (source === 'count') {
-                    setInput(
-                        caepPopulationSize,
-                        false,
-                        caepPopulationSizeErrorDiv,
-                        'Число индивидов должно быть положительным целым числом',
-                    );
-                }
-                valid = false;
-            } else if (Number.isInteger(accepted) && accepted > count) {
-                if (source === 'count') {
-                    setInput(
-                        caepPopulationSize,
-                        false,
-                        caepPopulationSizeErrorDiv,
-                        'Число индивидов должно быть не меньше числа принимаемых особей',
-                    );
-                }
-                valid = false;
-            } else {
-                setInput(caepPopulationSize, true, caepPopulationSizeErrorDiv);
-            }
-
-            // Проверка принимаемых особей
-            if (!Number.isInteger(accepted) || accepted < 0 || accepted > count) {
-                if (source === 'accepted') {
-                    setInput(
-                        caepNumAccepted,
-                        false,
-                        caepNumAcceptedErrorDiv,
-                        'Число принимаемых особей должно быть неотрицательным и не больше числа всех особей',
-                    );
-                }
-                valid = false;
-            } else {
-                setInput(caepNumAccepted, true, caepNumAcceptedErrorDiv);
-            }
-
-            if (valid) {
-                params.population_size = count;
-                params.num_accepted = accepted;
-            }
-        }
-
-        caepPopulationSize.addEventListener('change', () => validateCAEPFields('count'));
-        caepNumAccepted.addEventListener('change', () => validateCAEPFields('accepted'));
-    }
-*/
     // --- Harmony Search ---
     const hsModeSelect = document.getElementById('hs_mode');
     const hsHmcrInput = document.getElementById('hs_hmcr');
@@ -854,7 +744,6 @@ function setupAlgorithmParams() {
     setupGeneralParams();
     setupBBOInputs();
     setupCulturalInputs();
-    //setupCAEPInputs();
     setupHSInputs();
 }
 
@@ -885,17 +774,14 @@ function switchPlots() {
     } else {
         document.getElementById('graph3d').style.display = 'none';
         convergencePlotDiv.style.display = 'block';
-        //Plotly.Plots.resize(convergencePlotDiv);
-        //initConvergencePlot(convergencePlotDiv);
+
         if (!isConvergenceInitialized) {
             initConvergencePlot(convergencePlotDiv);
             isConvergenceInitialized = true;
         }
-        updateConvergencePlot(convergencePlotDiv, tabData.history);
-        // Plotly.Plots.resize(convergencePlotDiv);
-    }
 
-    //updatePlot();
+        updateConvergencePlot(convergencePlotDiv, tabData.history);
+    }
 }
 
 function setupUI() {
@@ -944,7 +830,7 @@ function setupUI() {
         showPopulation.textContent = state.plotSettings.showPopulation
             ? 'Показать решение'
             : 'Показать популяцию';
-        //updatePlot();
+
         let tab = getCurrentTabData();
         if (state.plotSettings.showSurface) {
             addPoints(
@@ -984,7 +870,6 @@ export function initUI() {
 
     setupUI();
     updateMethodInfo();
-    // initConvergencePlot(convergencePlotDiv);
 
     updatePlot();
 }

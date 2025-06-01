@@ -100,7 +100,6 @@ function plotSurface(f, plotSettings, population = [], minimum = undefined, traj
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
-        //renderer.setClearColor(0xffffff); // Белый фон
         container.appendChild(renderer.domElement);
 
         // Управление камерой
@@ -158,11 +157,7 @@ function updateGraph(f, plotSettings, population, minimum, trajectory) {
     if (plotSettings.equalScale) {
         applyEqualScale(f.boundsX, f.boundsY, zMax, zMin);
     } else {
-        applyRealScale(
-            plotSettings,
-            100,
-            //Math.floor(Math.max(width, height) / 2) * 2
-        );
+        applyRealScale(plotSettings, 100);
         let axeLength = Math.ceil(
             Math.max(
                 Math.abs(f.boundsX[0]),
@@ -173,7 +168,7 @@ function updateGraph(f, plotSettings, population, minimum, trajectory) {
         );
         addGrid(scene, axeLength * 2);
         grid.scale.set(surface.scale.x, 1, surface.scale.y);
-        //  grid.rotateX(-Math.PI / 2);
+
         addAxes(
             scene,
             [-axeLength * surface.scale.x, axeLength * surface.scale.x],
@@ -199,12 +194,10 @@ function updateGraph(f, plotSettings, population, minimum, trajectory) {
 
         surfaceGrid.scale.set(surface.scale.x, surface.scale.y, surface.scale.z);
         surfaceGrid.rotateX(-Math.PI / 2);
-        //surfaceGrid.rotateZ(Math.PI);
     }
     addPoints(f, population, minimum, plotSettings.showPopulation, plotSettings.pointSize);
     addTrajectory(f, plotSettings.showTrajectory, trajectory);
     surface.rotateX(-Math.PI / 2);
-    //surface.rotateZ(Math.PI);
 }
 
 function removePreviousElements() {
@@ -259,12 +252,9 @@ function removeAxesAndLabels() {
 }
 
 function calculateZRanges(boundsX, boundsY, z) {
-    //let width = Math.abs(boundsX[1] - boundsX[0]);
-    //let height = Math.abs(boundsY[1] - boundsY[0]);
     let allZValues = z.flat();
     let zMax = Math.max(...allZValues),
         zMin = Math.min(...allZValues);
-    //let depth = Math.abs(zMax - zMin);
 
     return { zMax, zMin };
 }
@@ -296,12 +286,11 @@ function getSurface(geometry, colors) {
         opacity: 0.9,
         transparent: true,
     });
-    // const material = new THREE.MeshBasicMaterial({ vertexColors: true });
 
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     let surface = new THREE.Mesh(geometry, material);
-    // surface.rotation.x = Math.PI / 2;
+
     return surface;
 }
 
@@ -331,50 +320,7 @@ function getSurfaceGeometry(f, data) {
     geometry.computeVertexNormals();
     return { geometry, vertices };
 }
-/*
-function addGridToSurface(x, y, z, scene) {
-    surfaceGrid = new THREE.Group();
 
-    // Генерация линий для сетки по оси X
-    for (let i = 0; i < x.length; i++) {
-        let lineGeometry = new THREE.BufferGeometry();
-        let positions = [];
-
-        // Добавление точек для линии вдоль оси X
-        for (let j = 0; j < y.length; j++) {
-            positions.push(x[i], y[j], z[i][j]);
-        }
-
-        // Установка вершин в BufferGeometry
-        lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-
-        let lineMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
-        let line = new THREE.Line(lineGeometry, lineMaterial);
-        surfaceGrid.add(line);
-    }
-
-    // Генерация линий для сетки по оси Y
-    for (let j = 0; j < y.length; j++) {
-        let lineGeometry = new THREE.BufferGeometry();
-        let positions = [];
-
-        // Добавление точек для линии вдоль оси Y
-        for (let i = 0; i < x.length; i++) {
-            positions.push(x[i], y[j], z[i][j]);
-        }
-
-        // Установка вершин в BufferGeometry
-        lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-
-        let lineMaterial = new THREE.LineBasicMaterial({ color: 0x888888 });
-        let line = new THREE.Line(lineGeometry, lineMaterial);
-        surfaceGrid.add(line);
-    }
-
-    scene.add(surfaceGrid);
-}
-
-*/
 function addGridToSurface(x, y, z, scene) {
     if (surfaceGrid) {
         scene.remove(surfaceGrid);
@@ -391,7 +337,6 @@ function addGridToSurface(x, y, z, scene) {
     surfaceGrid = new THREE.LineSegments(wireframeGeometry, wireframeMaterial);
 
     surfaceGrid.scale.set(surface.scale.x, surface.scale.y, surface.scale.z);
-    //surfaceGrid.rotateX(-Math.PI / 2);
     scene.add(surfaceGrid);
 }
 
@@ -442,7 +387,7 @@ function addPoints(f, population, minimum, showPopulation, radius = 0.08, color 
             transparent: true,
             opacity: 0.5,
         });
-        //population.slice(1).forEach((p) => {
+
         population.forEach((p) => {
             const zValue = evaluateFunction(f.function, { x: p[0], y: p[1] });
 
@@ -455,9 +400,6 @@ function addPoints(f, population, minimum, showPopulation, radius = 0.08, color 
             pointCloud.add(sphere);
         });
 
-        // Добавляем группу с точками в сцену
-        // pointCloud.rotateX(-Math.PI / 2);
-        //pointCloud.rotateZ(Math.PI);
         scene.add(pointCloud);
     }
     if (minimum) {
@@ -480,9 +422,6 @@ function addMinimum(f, p, radius = 0.08) {
     const zScaled = zValue * surface.scale.z;
     minPoint.position.set(xScaled, zScaled, -yScaled);
 
-    // Добавляем группу с точками в сцену
-    // minPoint.rotateX(-Math.PI / 2);
-    //minPoint.rotateZ(Math.PI);
     scene.add(minPoint);
 }
 
@@ -522,19 +461,13 @@ function addAxisTicks(scene, axis, rangeL, rangeR, scale) {
     const fontSize = 48;
 
     let step = 1;
-    /*const range = Math.abs(rangeR - rangeL);
-    if (range > 10) step = 100;
-     if (scale < 0.5) {
-        step = Math.floor(Math.abs(rangeR - rangeL) / 10);
-    }
-    */
+
     if (Math.abs(rangeR - rangeL) > 50) {
         step = Math.floor(Math.abs(rangeR - rangeL) / 100);
     }
     if (scale < 0.5) {
         step = Math.floor(Math.abs(rangeR - rangeL) / 10);
     }
-    //step = 1 * Math.abs(scale);
 
     if (step === 0) step = 1;
 

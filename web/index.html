@@ -17,7 +17,7 @@
                 <div class="tabButtons">
                     <button class="tabButton" id="bbo_tab_button">Биогеографическая
                         оптимизация</button>
-                    <button class="tabButton" id="cultural_tab_button">Культурная оптимизация</button>
+                    <button class="tabButton" id="cultural_tab_button">Культурный алгоритм</button>
                     <button class="tabButton" id="harmony_tab_button">Гармонический поиск</button>
                 </div>
 
@@ -86,10 +86,6 @@
                     <input type="number" id="ca_population_size" placeholder="50" min="1" step="1">
                     <div class="errorDiv" id="ca_population_size_error"></div>
 
-                    <!--<label for="ca_num_elites">Число элитных индивидов:</label>
-                    <input type="number" id="ca_num_elites" placeholder="5" min="0" step="1">
-                    <div class="errorDiv" id="ca_num_elites_error"></div>-->
-
                     <label for="ca_num_accepted">Число принятых особей:</label>
                     <input type="number" id="ca_num_accepted" placeholder="5" min="0" step="1">
                     <div class="errorDiv" id="ca_num_accepted_error"></div>
@@ -103,23 +99,7 @@
                     <div class="errorDiv" id="ca_mutational_dispersion_error"></div>
                 </div>
 
-                <!--<div id="caep_algorithm_tab" class="tab-content">
-                    <label for="caep_population_size">Число особей:</label>
-                    <input type="number" id="caep_population_size" value="50" min="1" step="1">
-                    <div class="errorDiv" id="caep_population_size_error"></div>
-
-                    <label for="caep_num_accepted">Число принятых индивидов:</label>
-                    <input type="number" id="caep_num_accepted" placeholder="10" min="0" step="1">
-
-                    <label for="caep_mutation_dispersion">Мутационная дисперсия:</label>
-                    <input type="number" id="caep_mutation_dispersion" placeholder="0.1" min="0" max="1" step="0.01">
-
-                    <label for="caep_belief_inertia">Инерция пространства убеждений:</label>
-                    <input type="number" id="caep_belief_inertia" placeholder="0.5" min="0" max="1" step="0.01">
-                </div>-->
-
                 <div id="harmony_algorithm_tab" class="tab-content">
-                    <!-- Harmony Memory Size -->
                     <label for="hs_hms">Размер памяти гармоний (HMS):</label>
                     <input type="number" id="hs_hms" placeholder="30" min="1" step="1">
                     <div class="errorDiv" id="hs_hms_error"></div>
@@ -130,17 +110,14 @@
                         <option value="adaptive">Адаптивный</option>
                     </select>
 
-                    <!-- HMCR -->
                     <label for="hs_hmcr">Скорость анализа гармонической памяти (HMCR):</label>
                     <input type="number" id="hs_hmcr" step="0.01" title="Рекомендуется 0.7–0.95" placeholder="0.9">>
                     <div class="errorDiv" id="hs_hmcr_error"></div>
 
-                    <!-- PAR -->
                     <label for="hs_par">Cкорость корректировки высоты звучания (PAR):</label>
                     <input type="number" id="hs_par" step="0.01" title="Рекомендуется 0.1–0.5" placeholder="0.3">>
                     <div class="errorDiv" id="hs_par_error"></div>
 
-                    <!-- Bandwidth -->
                     <label for="hs_bw">Дистанционный интервал (BW):</label>
                     <input type="number" id="hs_bw" step="0.001" title="Обычно 0.001–1.0" placeholder="0.01">
                     <div class="errorDiv" id="hs_bw_error"></div>

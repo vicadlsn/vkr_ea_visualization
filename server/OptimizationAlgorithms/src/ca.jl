@@ -4,24 +4,20 @@ using Random
 
 export cultural_algorithm
 
-# Инициализация популяции: dim × population_size
 function initialize_population(dim, population_size, lower_bound, upper_bound)
     rand_matrix = rand(dim, population_size)
     return lower_bound .+ (upper_bound .- lower_bound) .* rand_matrix
 end
 
-# Оценка приспособленности популяции
 function evaluate_population(population, cost_func)
     return [cost_func(individual) for individual in eachcol(population)]
 end
 
-# Сортировка популяции по значению функции
 function sort_population(population::Matrix{Float64}, fitness::Vector{Float64})
     indices = sortperm(fitness)
     return population[:, indices], fitness[indices]
 end
 
-# Обновление belief space с инерцией inertia
 function update_belief_space!(belief_space::Vector{Tuple{Float64, Float64}},
                               accepted::Matrix{Float64}, inertia::Float64)
     dim = size(accepted, 1)
@@ -36,7 +32,6 @@ function update_belief_space!(belief_space::Vector{Tuple{Float64, Float64}},
     end
 end
 
-# Корректировка особи с учётом belief space
 function adjust_solution_CAEP(solution::Vector{Float64}, belief_space, lower_bound, upper_bound, dispersion)
     dim = length(solution)
     new_solution = copy(solution)
@@ -55,7 +50,6 @@ function adjust_solution_CAEP(solution::Vector{Float64}, belief_space, lower_bou
     return new_solution
 end
 
-# Бинарный турнир для выбора из объединённой популяции
 function binary_tournament(combined::Matrix{Float64}, fitness::Vector{Float64}, population_size::Int)
     dim = size(combined, 1)
     new_population = Matrix{Float64}(undef, dim, population_size)
@@ -67,17 +61,14 @@ function binary_tournament(combined::Matrix{Float64}, fitness::Vector{Float64}, 
     return new_population
 end
 
-#CAEP
 function cultural_algorithm(cancel_flag::Ref{Bool}, objective_function, dim::Int, lower_bound::Vector{Float64}, upper_bound::Vector{Float64}, max_generations::Int, population_size::Int;
-num_accepted=round(Int, 0.2 * population_size), num_elites=2, inertia=0.5, dispersion=1.0, send_func=nothing, scale_factor=1, target_fitness=-Inf)
-    num_elites = min(num_elites, population_size)
+num_accepted=round(Int, 0.2 * population_size), inertia=0.5, dispersion=1.0, send_func=nothing, target_fitness=-Inf)
     population = initialize_population(dim, population_size, lower_bound, upper_bound)
     fitness = evaluate_population(population, objective_function)
     population, fitness = sort_population(population, fitness)
 
     best_solution, best_fitness = copy(population[:, 1]), fitness[1]
 
-    # Инициализация belief space
     belief_space = [(lower_bound[i], upper_bound[i]) for i in 1:dim]
 
     for generation in 1:max_generations
@@ -93,7 +84,7 @@ num_accepted=round(Int, 0.2 * population_size), num_elites=2, inertia=0.5, dispe
             return best_solution, best_fitness
         end
 
-        # Мутация популяции с учётом belief space
+        # Мутация популяции с учётом пространства убеждений
         new_population = Matrix{Float64}(undef, dim, population_size)
         for i in 1:population_size
             new_population[:, i] = adjust_solution_CAEP(population[:, i], belief_space,
@@ -102,17 +93,11 @@ num_accepted=round(Int, 0.2 * population_size), num_elites=2, inertia=0.5, dispe
         
         population = new_population
         fitness = evaluate_population(new_population, objective_function)
-
-        #combined = hcat(population, new_population)
-        #combined_fitness = vcat(fitness, new_fitness)
-        #population = binary_tournament(combined, combined_fitness, population_size)
-        #fitness = evaluate_population(population, objective_function)
         
         population, fitness = sort_population(population, fitness)
 
-        # Отбор лучших решений
+        # Отбор лучших решений для обновления пространства убеждений
         accepted = population[:, 1:num_accepted]
-        # Обновление belief space с инерцией
         update_belief_space!(belief_space, accepted, inertia)
         
         if fitness[1] < best_fitness

@@ -4,24 +4,16 @@ using Random
 
 export harmony_search
 
-# Инициализация памяти гармоний
 function initialize_harmony_memory(dim::Int, hms::Int, lower_bound, upper_bound)
     rand_matrix = rand(dim, hms)
     return lower_bound .+ (upper_bound .- lower_bound) .* rand_matrix
 end
 
-# Вычисление фитнес-функции
 function evaluate_harmonies(harmonies::Matrix{Float64}, cost_func)
     return [cost_func(h) for h in eachcol(harmonies)]
 end
 
-# Генерация новой гармонии
-# harmonies — память гармоний
-# lower_bound, upper_bound — границы поиска
-# hmcr — коэффициент памяти гармоний
-# par — вероятность настройки высоты
-# bw — диапазон настройки
-# dim — размерность задачи
+
 function generate_new_harmony(harmonies::Matrix{Float64}, lower_bound, upper_bound, hmcr::Float64, par::Float64, bw, dim::Int, mode::String)
     new_harmony = Vector{Float64}(undef, dim)
     hms = size(harmonies, 2)
@@ -34,12 +26,11 @@ function generate_new_harmony(harmonies::Matrix{Float64}, lower_bound, upper_bou
             # С вероятностью par настраиваем высоту (pitch adjustment)
             if rand() < par
                 if mode == "adaptive"
-                    # Гауссовская мутация в адаптивном режиме
-
-                    new_harmony[j] += randn() * bw[j] # Используем bw для каждой размерности
+                    # Гауссовская мутация
+                    new_harmony[j] += randn() * bw[j] # используем bw для каждой размерности
                 else
                     # Каноническая мутация (равномерное распределение)
-                    delta = bw * (2 * rand() - 1) # Возмущение в [-bw, bw]
+                    delta = bw * (2 * rand() - 1) # возмущение в [-bw, bw]
                     new_harmony[j] += delta
                 end
             end
@@ -53,8 +44,7 @@ function generate_new_harmony(harmonies::Matrix{Float64}, lower_bound, upper_bou
     return new_harmony
 end
 
-# Обновление памяти гармоний
-# Заменяем худшую гармонию на новую, если она лучше
+# Обновление памяти гармоний, заменяем худшую гармонию на новую, если она лучше
 function update_harmony_memory!(harmonies::Matrix{Float64}, fitness::Vector{Float64},
                                 new_harmony::Vector{Float64}, new_fitness::Float64)
     worst_idx = argmax(fitness)
@@ -70,8 +60,8 @@ function harmony_search(cancel_flag::Ref{Bool},
                         lower_bound, upper_bound, 
                         max_iterations::Int, hms::Int;
                         hmcr=0.9, par=0.3, bw=0.01,
-                        mode::String = "canonical",send_func=nothing,target_fitness=-Inf)  # "adaptive" или "canonical"
-    # Инициализация памяти гармоний и оценка
+                        mode::String = "canonical",send_func=nothing,target_fitness=-Inf)  # mode "adaptive" или "canonical"
+
     harmonies = initialize_harmony_memory(dim, hms, lower_bound, upper_bound)
     fitness = evaluate_harmonies(harmonies, objective_function)
 
@@ -90,14 +80,12 @@ function harmony_search(cancel_flag::Ref{Bool},
         end
 
         if best_fitness <= target_fitness
-            #@info "HS stopped: target fitness $target_fitness reached at generation $generation"
             if send_func !== nothing
                 send_func(iteration, best_fitness, best_solution, collect(eachcol(harmonies)))
             end
             return best_solution, best_fitness
         end
 
-        # Адаптивное изменение параметров, если выбран режим "adaptive"
         current_par = par
         current_bw = bw
         if mode == "adaptive"
@@ -116,7 +104,6 @@ function harmony_search(cancel_flag::Ref{Bool},
         # Обновление памяти гармоний
         update_harmony_memory!(harmonies, fitness, new_harmony, new_fitness)
 
-        # Обновление лучшего решения
         current_best_idx = argmin(fitness)
         current_best_fitness = fitness[current_best_idx]
 

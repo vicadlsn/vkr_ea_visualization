@@ -37,7 +37,7 @@ function handle_ws_client(http::HTTP.Stream)
     catch e
         if isa(e, InterruptException)
             @warn "WebSocket interrupted: InterruptException" client_id=client_id
-            return  # После warn сразу выйти из try/catch, чтобы перейти в finally
+            return
         else
             @error "WebSocket error" error=e client_id=client_id
         end
@@ -45,7 +45,6 @@ function handle_ws_client(http::HTTP.Stream)
         if !isnothing(optimization_task[])
             cleanup_task(optimization_task[], cancel_flag)
         end
-       # @info "WebSocket connection closed" client_id=client_id
     end
 end
 
@@ -98,7 +97,6 @@ function handle_ws_messages(ws::HTTP.WebSocket, client_id::String, optimization_
                 continue 
             end
 
-            # Валидация параметров??
             if !validate_start_params(data)
                 @error "Invalid start parameters" data=data client_id=client_id request_id=request_id method_id=method_id
                 send_error(ws, client_id, request_id, "Invalid parameters")
@@ -254,10 +252,8 @@ end
 function validate_cultural_params(params)
     required = [
         ("population_size", Int),
-        #("num_elites", Int),
         ("num_accepted", Int),
         ("iterations_count", Int),
-        #("scale_factor", Float64)
         ("inertia", Float64),
         ("dispersion", Float64)
     ]
@@ -271,21 +267,14 @@ function validate_cultural_params(params)
     if params["population_size"] < 1 || params["iterations_count"] < 1
         return false, "population_size and iterations_count must be >= 1"
     end
-    #if params["num_elites"] < 0
-    #    return false, "num_elites must be >= 0"
-    #end
+
     if params["num_accepted"] < 1
         return false, "num_accepted must be >= 1"
     end
-    #if params["num_elites"]> params["population_size"]
-    #    return false, "num_elites must be <= population_size"
-    #end
+
     if params["num_accepted"] > params["population_size"]
         return false, "num_accepted must be <= population_size"
     end
-    #if params["scale_factor"] < 0 #|| params["scale_factor"] > 1
-    #    return false, "scale_factor must be >= 0"
-    #end
 
     if  params["inertia"] < 0 || params["inertia"] > 1
             return false, "inertia must be in [0, 1]"
@@ -366,18 +355,16 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
                 return
             end
             population_size = params["population_size"]
-           # num_elites = params["num_elites"]
             inertia = params["inertia"]
             dispersion = params["dispersion"]
             num_accepted = params["num_accepted"]
             dim = DIMENSION
             max_iters = params["iterations_count"]
-            #scale_factor = params["scale_factor"]
             allocated = @allocated begin
                 best_solution, best_fitness = OptimizationAlgorithms.cultural_algorithm(cancel_flag,
                     f_v, dim, lower_bounds, upper_bounds, max_iters, population_size;
                     num_accepted=num_accepted, send_func=send_iter, inertia=inertia, dispersion=dispersion
-                )# num_elites=num_elites,  scale_factor=scale_factor, 
+                )
             end
         elseif method_id == "harmony"
             valid, msg = validate_harmony_params(params)
@@ -449,7 +436,6 @@ function send_optimization_data_closure(
             @warn "WebSocket is closed. Stopping process" client_id=client_id request_id=request_id method_id=method_id
             cancel_flag[]=true
             return
-            #error("WebSocket is closed") 
         end
 
         try
@@ -472,24 +458,19 @@ function send_optimization_data_closure(
     end
 end
 
-# Warm-up функция для прекомпиляции
 function warmup()
     t_start = time()
-    @info "Запуск warm-up для прекомпиляции функций оптимизации"
+    @info "Запуск warmup для прекомпиляции функций оптимизации"
     
-    # Простая функция для парсинга
     f = MathParser.make_function_v2("x^2+y^2")
     
-    # Минимальные параметры
     dim = 2
     lower_bounds = [-5.0, -5.0]
     upper_bounds = [5.0, 5.0]
     cancel_flag = Ref{Bool}(false)
     
-    # Функция для отправки данных (пустая, чтобы минимизировать выполнение)
     send_func = (iteration, best_fitness, best_solution, population) -> nothing
     
-    # Вызов методов оптимизации
     OptimizationAlgorithms.bbo(
         cancel_flag, f, dim, lower_bounds, upper_bounds, 0,1;
         mutation_probability=0.1, blending_rate=0.0, num_elites=1, send_func=send_func
@@ -497,7 +478,7 @@ function warmup()
     
     OptimizationAlgorithms.cultural_algorithm(
         cancel_flag, f, dim, lower_bounds, upper_bounds, 0, 1;
-        num_elites=1, num_accepted=1, send_func=send_func
+         num_accepted=1, send_func=send_func
     )
     
     OptimizationAlgorithms.harmony_search(
@@ -510,11 +491,10 @@ function warmup()
         mode="adaptive", send_func=send_func
     )
     
-    # прекомпилируем MathParser
     MathParser.make_function_v2("sin(e*x^2) + cos(y^2) + E")
 
     t_total = time() - t_start
-    @info "Warm-up занял $t_total секунд"
+    @info "Warmup занял $t_total секунд"
 end
 
 @setup_workload begin

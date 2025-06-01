@@ -9,8 +9,6 @@ const wsConnections = new Map();
 document.addEventListener('DOMContentLoaded', () => {
     initUI();
     state.activeRequests = {};
-    getCurrentTabData().currentStatus = `Готово к работе`;
-    updateCurrentStatus();
 
     const startButton = document.getElementById('startOptimization');
     const stopButton = document.getElementById('stopOptimization');
@@ -86,18 +84,15 @@ function startOptimization() {
             getCurrentTabData().currentStatus = 'Соединение установлено';
             updateCurrentStatus();
             ws.send(params);
-            //document.getElementById('startOptimization').disabled = true;
         },
         (data) => handleWebsocketMessage(data, method_id),
         () => {
             stopOptimization(method_id);
-            //document.getElementById('startOptimization').disabled = false;
             getCurrentTabData().currentStatus = 'Ошибка соединения';
             updateCurrentStatus();
         }, // Ошибка
         () => {
             stopOptimization(method_id);
-            //document.getElementById('startOptimization').disabled = false;
             getCurrentTabData().currentStatus = 'Соединение закрыто';
             updateCurrentStatus();
         }, // Закрытие
@@ -127,7 +122,7 @@ function handleWebsocketMessage(data, method_id) {
 
     if (state.activeRequests[method_id] !== request_id) {
         console.log('outdated message');
-        return; // устаревше сообщение
+        return; // устаревшее сообщение
     }
 
     const elapsedTime = (performance.now() - state.tabsData[method_id].startTime) / 1000;
@@ -155,7 +150,6 @@ function handleWebsocketMessage(data, method_id) {
                     state.tabsData[method_id].history,
                 );
             }
-            // document.getElementById('startOptimization').disabled = false;
             break;
         }
         case 'error': {
@@ -174,7 +168,6 @@ function handleWebsocketMessage(data, method_id) {
                     state.tabsData[method_id].history,
                 );
             }
-            //  document.getElementById('startOptimization').disabled = false;
             break;
         }
         case 'complete': {
@@ -193,7 +186,6 @@ function handleWebsocketMessage(data, method_id) {
                     state.tabsData[method_id].history,
                 );
             }
-            //    document.getElementById('startOptimization').disabled = false;
             break;
         }
         case 'iteration': {

@@ -1,7 +1,8 @@
 export { createWebsocket };
 
 function createWebsocket(method_id, onOpen, onMessage, onError, onClose) {
-    const ws = new WebSocket('ws://' + window.location.origin);
+    const host = window.location.host;
+    const ws = new WebSocket(`ws//${host}`);
 
     // const ws = new WebSocket('ws://localhost:9000');
 
@@ -36,7 +37,6 @@ function createWebsocket(method_id, onOpen, onMessage, onError, onClose) {
                 console.log('Sent message:', params);
             } else {
                 console.error(`WebSocket for ${method_id} not opened`);
-                // appStatusText.textContent = 'Соединение не установлено';
             }
         },
         close: () => ws.close(),

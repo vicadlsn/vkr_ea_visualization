@@ -9,7 +9,7 @@ using OptimizationHandler
 include("router.jl")
 using .Router
 
-const LOCALIP = "127.0.0.1" #string(Sockets.getipaddr())
+const LOCALIP = "127.0.0.1"
 const HTTP_PORT = 9000
 
 function setup_logger()
