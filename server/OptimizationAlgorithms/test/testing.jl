@@ -80,22 +80,21 @@ function test_algorithm(algorithm_func;
                         population_size=50, 
                         max_generations=100, 
                         runs=30, 
-                        target_threshold=1e-3,
+                        target_threshold=1e-4,
                         known_solution=nothing,
                         params...)
-    # Инициализация массивов
-    results = Float64[]          # best_fitness
-    times = Float64[]            # Время
-    iterations = Int[]           # Итерации
-    distances_to_target = Float64[]  # Расстояние по приспособленности
-    distances_to_solution = Float64[]  # Евклидово расстояние до known_solution
-    success_flags = Bool[]       # Успешные запуски
-    solutions = Vector{Float64}[]  # Решения
 
-    # Установка known_solution
+    results = Float64[]          
+    times = Float64[]            
+    iterations = Int[]           
+    distances_to_target = Float64[]  
+    distances_to_solution = Float64[] 
+    success_flags = Bool[]      
+    solutions = Vector{Float64}[] 
+
     known_solution = isnothing(known_solution) ? zeros(dim) : known_solution
-    known_fitness = func[2]  # Ожидаемое значение функции
-    target_fitness = known_fitness+target_threshold  # Используем target_fitness как порог
+    known_fitness = func[2]  
+    target_fitness = known_fitness+target_threshold  
 
     for run_id in 1:runs
         cancel_flag = Ref{Bool}(false)
@@ -114,7 +113,7 @@ function test_algorithm(algorithm_func;
                 max_generations,
                 population_size; 
                 send_func=send_func_closure,
-              #  target_fitness=target_fitness,
+                target_fitness=target_fitness,
                 params...
             )
             
@@ -124,7 +123,6 @@ function test_algorithm(algorithm_func;
             distance = abs(best_fit - known_fitness)
             push!(distances_to_target, distance)
             push!(success_flags, distance ≤ target_threshold)
-            # Евклидово расстояние до решения
             solution_distance = sqrt(sum((best_sol .- known_solution).^2))
             push!(distances_to_solution, solution_distance)
         end

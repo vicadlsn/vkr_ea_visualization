@@ -73,6 +73,11 @@ function harmony_search(cancel_flag::Ref{Bool},
         send_func(0, best_fitness, best_solution, collect(eachcol(harmonies)))
     end
 
+    b_min = 0.0001
+    b_max = 0.05
+    p_max = 0.99
+    p_min = 0.01
+
     for iteration in 1:max_iterations
         if cancel_flag[]
             @info "HS cancelled"
@@ -90,10 +95,10 @@ function harmony_search(cancel_flag::Ref{Bool},
         current_bw = bw
         if mode == "adaptive"
             # Линейное увеличение par от 0.01 до 0.99
-            current_par = 0.01 + (0.99 - 0.01) * (iteration / max_iterations)
+            current_par = p_min + (p_max - p_min) * (iteration / max_iterations)
             # Экспоненциальное уменьшение bw от 5% до 0.01% диапазона поиска
             full_range = upper_bound .- lower_bound
-            current_bw = full_range .* (0.05 * exp(-5 * iteration / max_iterations))
+            current_bw = full_range .* (b_max * exp(log(b_min/b_max) * iteration / max_iterations))
         end
 
         # Создание новой гармонии
