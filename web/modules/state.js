@@ -33,7 +33,7 @@ export const state = {
             currentStatus: '',
             params: {
                 islands_count: 50,
-                mutation_probability: 0.5,
+                mutation_probability: 0.1,
                 blending_rate: 0.1,
                 num_elites: 2,
             },
@@ -43,7 +43,7 @@ export const state = {
             iteration: 0,
             history: [],
             trajectory: [],
-            iterations_count: 10,
+            iterations_count: 100,
             total_iterations: 0, // это для отображения инфы о методе
             currentFunction: {
                 function: getFunctionData('cos(x^2+y^2)'),
@@ -110,7 +110,7 @@ export const state = {
             iteration: 0,
             history: [],
             trajectory: [],
-            iterations_count: 10,
+            iterations_count: 1000,
             total_iterations: 0, // это для отображения инфы о методе
             currentFunction: {
                 function: getFunctionData('cos(x^2+y^2)'),
