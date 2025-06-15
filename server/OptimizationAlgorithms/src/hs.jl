@@ -25,14 +25,8 @@ function generate_new_harmony(harmonies::Matrix{Float64}, lower_bound, upper_bou
             new_harmony[j] = harmonies[j, idx]
             # С вероятностью par настраиваем высоту (pitch adjustment)
             if rand() < par
-                if mode == "adaptive"
-                    # Гауссовская мутация
-                    new_harmony[j] += randn() * bw[j] # используем bw для каждой размерности
-                else
-                    # Каноническая мутация (равномерное распределение)
-                    delta = bw * (2 * rand() - 1) # возмущение в [-bw, bw]
-                    new_harmony[j] += delta
-                end
+                delta = (mode == "adaptive" ? bw[j] : bw) * (2 * rand() - 1)
+                new_harmony[j] += delta
             end
         else
             # Случайное значение в пределах границ
@@ -59,7 +53,11 @@ function harmony_search(cancel_flag::Ref{Bool},
                         objective_function, dim::Int, 
                         lower_bound, upper_bound, 
                         max_iterations::Int, hms::Int;
-                        hmcr=0.9, par=0.3, bw=0.01,
+                        hmcr=0.9, par=0.3, bw=0.01, 
+                        bw_max = 0.05,
+                        bw_min = 0.0001,
+                        par_min = 0.01,
+                        par_max = 0.99,
                         mode::String = "canonical",send_func=nothing,target_fitness=-Inf)  # mode "adaptive" или "canonical"
 
     harmonies = initialize_harmony_memory(dim, hms, lower_bound, upper_bound)
@@ -73,32 +71,22 @@ function harmony_search(cancel_flag::Ref{Bool},
         send_func(0, best_fitness, best_solution, collect(eachcol(harmonies)))
     end
 
-    b_min = 0.0001
-    b_max = 0.05
-    p_max = 0.99
-    p_min = 0.01
-
+    target_achieved = false
+    min_iters = max_iterations
     for iteration in 1:max_iterations
         if cancel_flag[]
             @info "HS cancelled"
             return best_solution, best_fitness
         end
 
-        if best_fitness <= target_fitness
-            if send_func !== nothing
-                send_func(iteration, best_fitness, best_solution, collect(eachcol(harmonies)))
-            end
-            return best_solution, best_fitness
-        end
-
         current_par = par
         current_bw = bw
         if mode == "adaptive"
-            # Линейное увеличение par от 0.01 до 0.99
-            current_par = p_min + (p_max - p_min) * (iteration / max_iterations)
-            # Экспоненциальное уменьшение bw от 5% до 0.01% диапазона поиска
+            # Линейное увеличение par
+            current_par = par_min + (par_max - par_min) * (iteration / max_iterations)
+            # Экспоненциальное уменьшение bw
             full_range = upper_bound .- lower_bound
-            current_bw = full_range .* (b_max * exp(log(b_min/b_max) * iteration / max_iterations))
+            current_bw = full_range .* (bw_max * exp(log(bw_min/bw_max) * iteration / max_iterations))
         end
 
         # Создание новой гармонии
@@ -120,8 +108,16 @@ function harmony_search(cancel_flag::Ref{Bool},
         if send_func !== nothing
             send_func(iteration, best_fitness, best_solution, collect(eachcol(harmonies)))
         end
+
+        if !target_achieved && best_fitness <= target_fitness
+            target_achieved = true
+            min_iters = iteration
+        end
     end
 
+    if target_fitness > -Inf
+        send_func(min_iters, best_fitness, best_solution, collect(eachcol(harmonies)))
+    end
     return best_solution, best_fitness
 end
 

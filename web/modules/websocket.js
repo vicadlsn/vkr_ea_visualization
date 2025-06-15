@@ -4,7 +4,7 @@ function createWebsocket(method_id, onOpen, onMessage, onError, onClose) {
     const host = window.location.host;
     const ws = new WebSocket(`ws//${host}`);
 
-    // const ws = new WebSocket('ws://localhost:9000');
+    //const ws = new WebSocket('ws://localhost:9000');
 
     ws.onopen = (e) => {
         console.log('WebSocket opened for ${method_id}');

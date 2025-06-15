@@ -237,6 +237,7 @@ function setupEventListeners() {
         }
 
         const target = event.target;
+
         const builtin = builtinFunctions[target.value];
         const curFunc = getCurrentTabDataFunction();
 
@@ -403,7 +404,6 @@ function setupEventListeners() {
             }
 
             const copiedFunction = state.copied.function;
-
             functionInput.value = copiedFunction.function.original || '';
             functionSelectBuiltin.value = copiedFunction.builtin || '';
             xRangeMinInput.value = copiedFunction.boundsX?.[0] ?? '';
@@ -489,7 +489,7 @@ function setupAlgorithmParams() {
                     bboIslandsCount,
                     false,
                     bboIslandsCountErrorDiv,
-                    'Число островов должно быть положительным целым числом',
+                    'Число островов должно быть целым положительным числом',
                 );
                 return;
             }
@@ -583,6 +583,9 @@ function setupAlgorithmParams() {
         'ca_mutational_dispersion_error',
     );
 
+    const caMutationScale = document.getElementById('ca_mutation_scale');
+    const caMutationScaleErrorDiv = document.getElementById('ca_mutation_scale_error');
+
     function setupCulturalInputs() {
         const culturalState = state.tabsData[METHOD_NAMES.cultural];
         const params = culturalState.params;
@@ -590,7 +593,8 @@ function setupAlgorithmParams() {
         caPopulationSize.value = params.population_size;
         caNumAccepted.value = params.num_accepted;
         caBeliefSpaceInertia.value = params.inertia;
-        caMutationalDispersion.value = params.dispersion;
+        caMutationalDispersion.value = params.gamma;
+        caMutationScale.value = params.beta;
 
         function validateCAFields(source) {
             const count = parseInt(caPopulationSize.value);
@@ -604,7 +608,7 @@ function setupAlgorithmParams() {
                         caPopulationSize,
                         false,
                         caPopulationSizeErrorDiv,
-                        'Число индивидов должно быть положительным целым числом',
+                        'Число индивидов должно быть целым положительным числом',
                     );
                 }
                 valid = false;
@@ -656,10 +660,19 @@ function setupAlgorithmParams() {
         bindNumericInput(
             caMutationalDispersion,
             parseFloat,
-            (val) => (params.dispersion = val),
-            (val) => typeof val === 'number' && !Number.isNaN(val),
+            (val) => (params.gamma = val),
+            (val) => typeof val === 'number' && !Number.isNaN(val) && val >= 0,
             caMutationalDispersionErrorDiv,
-            'Мутационная дисперсия должна быть числом',
+            'Базовая дисперсия должна быть больше 0',
+        );
+
+        bindNumericInput(
+            caMutationScale,
+            parseFloat,
+            (val) => (params.beta = val),
+            (val) => typeof val === 'number' && !Number.isNaN(val) && val >= 0,
+            caMutationScaleErrorDiv,
+            'Коэффициент влияния приспособленности должен быть больше 0',
         );
 
         caPopulationSize.addEventListener('change', () => validateCAFields('count'));
@@ -668,14 +681,24 @@ function setupAlgorithmParams() {
 
     // --- Harmony Search ---
     const hsModeSelect = document.getElementById('hs_mode');
-    const hsHmcrInput = document.getElementById('hs_hmcr');
-    const hsParInput = document.getElementById('hs_par');
-    const hsBwInput = document.getElementById('hs_bw');
     const hsHmsInput = document.getElementById('hs_hms');
-    const hsHmcrErrorDiv = document.getElementById('hs_hmcr_error');
-    const hsParErrorDiv = document.getElementById('hs_par_error');
-    const hsBwErrorDiv = document.getElementById('hs_bw_error');
     const hsHmsErrorDiv = document.getElementById('hs_hms_error');
+    const hsHmcrInput = document.getElementById('hs_hmcr');
+    const hsHmcrErrorDiv = document.getElementById('hs_hmcr_error');
+    const hsParInput = document.getElementById('hs_par');
+    const hsParErrorDiv = document.getElementById('hs_par_error');
+    const hsBwInput = document.getElementById('hs_bw');
+    const hsBwErrorDiv = document.getElementById('hs_bw_error');
+
+    const hsParStartInput = document.getElementById('hs_par_start');
+    const hsParEndInput = document.getElementById('hs_par_end');
+    const hsParRangeErrorDiv = document.getElementById('hs_par_range_error');
+    const hsBwStartInput = document.getElementById('hs_bw_start');
+    const hsBwEndInput = document.getElementById('hs_bw_end');
+    const hsBwRangeErrorDiv = document.getElementById('hs_bw_range_error');
+
+    const hsCanonicalParamsDiv = document.getElementById('hs_canonical_params');
+    const hsAdaptiveParamsDiv = document.getElementById('hs_adaptive_params');
 
     function setupHSInputs() {
         const hsState = state.tabsData[METHOD_NAMES.harmony].params;
@@ -685,22 +708,36 @@ function setupAlgorithmParams() {
         hsBwInput.value = hsState.bw;
         hsHmsInput.value = hsState.hms;
 
+        hsParStartInput.value = hsState.par_start;
+        hsParEndInput.value = hsState.par_end;
+        hsBwStartInput.value = hsState.bw_start;
+        hsBwEndInput.value = hsState.bw_end;
+
         function updateHSModeUI() {
             const isCanonical = hsModeSelect.value === 'canonical';
-            hsHmcrInput.disabled = !isCanonical;
-            hsParInput.disabled = !isCanonical;
+            //hsHmcrInput.disabled = !isCanonical;
+            /*hsParInput.disabled = !isCanonical;
             hsBwInput.disabled = !isCanonical;
+            hsParInput.parentElement.style.display = isCanonical ? '' : 'none';
+            hsBwInput.parentElement.style.display = isCanonical ? '' : 'none';*/
+
+            hsCanonicalParamsDiv.style.display = isCanonical ? '' : 'none';
+            hsAdaptiveParamsDiv.style.display = isCanonical ? 'none' : '';
         }
 
         hsModeSelect.addEventListener('change', () => {
             hsState.mode = hsModeSelect.value;
-            if (hsState.mode !== 'canonical') {
-                /* hsState.hmcr = undefined;
-                hsState.par = undefined;
-                hsState.bw = undefined;*/
-            }
             updateHSModeUI();
         });
+
+        bindNumericInput(
+            hsHmsInput,
+            parseInt,
+            (val) => (hsState.hms = val),
+            (val) => Number.isInteger(val) && val >= 1,
+            hsHmsErrorDiv,
+            'Значение должно быть целым и больше 0.',
+        );
 
         bindNumericInput(
             hsHmcrInput,
@@ -726,16 +763,43 @@ function setupAlgorithmParams() {
             (val) => (hsState.bw = val),
             (val) => val > 0,
             hsBwErrorDiv,
-            'Значение должно быть в пределах от 0 до 1.',
+            'Значение должно быть больше 0.',
         );
 
         bindNumericInput(
-            hsHmsInput,
-            parseInt,
-            (val) => (hsState.hms = val),
-            (val) => Number.isInteger(val) && val >= 1,
-            hsHmsErrorDiv,
-            'Значение должно быть целым и больше 0.',
+            hsParStartInput,
+            parseFloat,
+            (val) => (hsState.par_start = val),
+            (val) => val >= 0 && val <= 1,
+            hsParRangeErrorDiv,
+            'Значения должны быть в пределах от 0 до 1.',
+        );
+
+        bindNumericInput(
+            hsParEndInput,
+            parseFloat,
+            (val) => (hsState.par_end = val),
+            (val) => val >= 0 && val <= 1,
+            hsParRangeErrorDiv,
+            'Значения должны быть в пределах от 0 до 1.',
+        );
+
+        bindNumericInput(
+            hsBwStartInput,
+            parseFloat,
+            (val) => (hsState.bw_start = val),
+            (val) => val > 0,
+            hsBwRangeErrorDiv,
+            'Значения должны быть больше 0.',
+        );
+
+        bindNumericInput(
+            hsBwEndInput,
+            parseFloat,
+            (val) => (hsState.bw_end = val),
+            (val) => val > 0,
+            hsBwRangeErrorDiv,
+            'Значения должны быть больше 0.',
         );
 
         updateHSModeUI();
@@ -872,4 +936,15 @@ export function initUI() {
     updateMethodInfo();
 
     updatePlot();
+
+    document.getElementById('showHelp').onclick = function () {
+        document.getElementById('helpModal').style.display = 'flex';
+    };
+    document.getElementById('closeHelpModal').onclick = function () {
+        document.getElementById('helpModal').style.display = 'none';
+    };
+    window.onclick = function (event) {
+        const modal = document.getElementById('helpModal');
+        if (event.target === modal) modal.style.display = 'none';
+    };
 }

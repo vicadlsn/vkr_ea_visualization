@@ -13,7 +13,6 @@ function evaluate_population(population, cost_func)
     return [cost_func(individual) for individual in eachcol(population)]
 end
 
-# Рулеточный отбор на основе накопленных вероятностей
 function roulette_wheel_selection(mu)
     total = sum(mu)
     r = rand() * total
@@ -24,7 +23,7 @@ function roulette_wheel_selection(mu)
             return i
         end
     end
-    return length(mu)  # на случай пограничного значения
+    return length(mu)
 end
 
 function sort_population(population, fitness)
@@ -44,54 +43,44 @@ function bbo(cancel_flag::Ref{Bool}, objective_function, dim, lower_bound, upper
         send_func(0, best_fitness, best_solution, collect(eachcol(population)))
     end
 
+    mutation_rate = mutation_probability
+    target_achieved = false
+    min_iters = max_generations
     for generation in 1:max_generations
         if cancel_flag[]
             @info "BBO cancelled"
             return best_solution, best_fitness
         end
 
-        if best_fitness <= target_fitness
-            if send_func !== nothing
-                send_func(generation, best_fitness, best_solution, collect(eachcol(population)))
-            end
-            return best_solution, best_fitness
-        end
-
-        # Вероятности эмиграции и иммиграции
         mu = [(population_size + 1 - i) / (population_size + 1) for i in 1:population_size]
         lambda = 1 .- mu
 
-        # Сохранение элитных решений (оптимизация из генетических алгоритмов)
         elite_solutions = deepcopy(population[:, 1:num_elites])
         elite_fitness = copy(fitness[1:num_elites])
         new_population = copy(population)
 
         for i in 1:population_size
-            # Оператор миграции с рулеточным отбором
             for j in 1:dim
                 if rand() < lambda[i]
                     selected_index = roulette_wheel_selection(mu)
                     new_population[j, i] = blending_rate * new_population[j, i] + (1 - blending_rate) * population[j, selected_index]
-                    new_population[j, i] = clamp(new_population[j, i], lower_bound[j], upper_bound[j]) # если вышли за допустимые границы
+                    new_population[j, i] = clamp(new_population[j, i], lower_bound[j], upper_bound[j])
                 end
-            end            
+            end    
 
-            # оператор мутации
             for j in 1:dim
-                if rand() < mutation_probability
+                if rand() < mutation_rate
                     new_population[j, i] = lower_bound[j] + (upper_bound[j] - lower_bound[j]) * rand()
                     new_population[j, i] = clamp(new_population[j, i], lower_bound[j], upper_bound[j])
                 end
             end
-        end # для каждой особи миграция + мутация
+        end
 
-        # Обновление популяции
         population = new_population
         fitness = evaluate_population(population, objective_function)
 
-        sorted_indices = sortperm(fitness, rev=true)[1:num_elites]
-        # Замещение худших особей на элиту из прошлого поколения
-        for (k, idx) in enumerate(sorted_indices)
+        worst_indices  = sortperm(fitness, rev=true)[1:num_elites]
+        for (k, idx) in enumerate(worst_indices )
             population[:, idx] = elite_solutions[:, k]
             fitness[idx] = elite_fitness[k]
         end
@@ -106,8 +95,17 @@ function bbo(cancel_flag::Ref{Bool}, objective_function, dim, lower_bound, upper
         if send_func !== nothing
             send_func(generation, best_fitness, best_solution, collect(eachcol(population)))
         end
+
+        if !target_achieved && best_fitness <= target_fitness
+            target_achieved = true
+            min_iters = generation
+        end
     end
 
+
+    if target_fitness > -Inf
+        send_func(min_iters, best_fitness, best_solution, collect(eachcol(population)))
+    end
     return best_solution, best_fitness
 end
 

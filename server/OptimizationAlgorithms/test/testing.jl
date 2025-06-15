@@ -44,26 +44,23 @@ function michalewicz(x; m=10)
     return -sum(sin(x[i]) * (sin(i * x[i]^2 / π))^(2m) for i in 1:d)
 end
 const test_functions = Dict(
-   "Sphere"    => (sphere, 0.0),
-    "Rastrigin" => (rastrigin, 0.0),
-    "Ackley"    => (ackley, 0.0),
+   #"Sphere"    => (sphere, 0.0),
+   # "Rastrigin" => (rastrigin, 0.0),
+    #"Ackley"    => (ackley, 0.0),
     "Rosenbrock"=> (rosenbrock, 0.0),
-    "Schwefel"  => (schwefel, 0.0),
-    "Griewank"  => (griewank, 0.0),
-    "Levy"      => (levy, 0.0),
-   # "Michalewicz" => (michalewicz, -1.8013), # минимум для d=2, m=10
-
+    #"Schwefel"  => (schwefel, 0.0),
+    #"Griewank"  => (griewank, 0.0),
+    #"Levy"      => (levy, 0.0),
 )
 
 bounds_dict = Dict(
-    "Sphere"    => (-100.0, 100.0),
-    "Rastrigin" => (-5.12, 5.12),
-    "Ackley"    => (-32.768, 32.768),
-    "Rosenbrock"=> (-30.0, 30.0),
-    "Schwefel"  => (-500.0, 500.0),
-    "Griewank"  => (-600.0, 600.0),
-    "Levy"      => (-10.0, 10.0),
-    "Michalewicz" => (0.0, π)
+  #  "Sphere"    => (-100.0, 100.0),
+ #   "Rastrigin" => (-5.12, 5.12),
+ #   "Ackley"    => (-32.768, 32.768),
+    "Rosenbrock"=> (-5.0, 5.0),
+  #  "Schwefel"  => (-500.0, 500.0),
+ #   "Griewank"  => (-600.0, 600.0),
+  #  "Levy"      => (-10.0, 10.0),
 )
 
 

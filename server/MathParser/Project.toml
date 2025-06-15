@@ -5,6 +5,8 @@ version = "0.1.0"
 
 [deps]
 GeneralizedGenerated = "6b9d7cbe-bcb9-11e9-073f-15a7a543e2eb"
+RuntimeGeneratedFunctions = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
 
 [compat]
 GeneralizedGenerated = "0.3.3"
+RuntimeGeneratedFunctions = "0.5.15"

@@ -93,7 +93,7 @@ function startOptimization() {
         }, // Ошибка
         () => {
             stopOptimization(method_id);
-            getCurrentTabData().currentStatus = 'Соединение закрыто';
+            getCurrentTabData().currentStatus = 'Задача остановлена, соединение закрыто';
             updateCurrentStatus();
         }, // Закрытие
     );

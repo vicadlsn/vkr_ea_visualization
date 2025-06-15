@@ -8,22 +8,24 @@
     <link rel="icon" href="/assets/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="/assets/css/styles.css" />
     <script type="module" src="/modules/main.js" defer></script>
+</head>
 
 <body>
     <div id="app">
         <div class="container">
             <div class="sidebar shadow-container">
+                <button id="showHelp" style="width:100%;margin-bottom:10px;">Руководство</button>
                 <h2>Метод оптимизации</h2>
                 <div class="tabButtons">
                     <button class="tabButton" id="bbo_tab_button">Биогеографическая
                         оптимизация</button>
                     <button class="tabButton" id="cultural_tab_button">Культурный алгоритм</button>
-                    <button class="tabButton" id="harmony_tab_button">Гармонический поиск</button>
+                    <button class="tabButton" id="harmony_tab_button">Алгоритм поиска гармонии</button>
                 </div>
 
                 <h2>Настройки</h2>
                 <label for="function">Функция z = f(x, y):</label>
-                <input type="string" id="functionInput" value="x^2 + y^2">
+                <input type="text" id="functionInput" value="x^2 + y^2">
                 <div class="errorDiv" id="functionError"></div>
 
                 <select id="functionSelectBuiltin">
@@ -54,8 +56,10 @@
                 <div class="errorDiv" id="iterationsCountInputErrorDiv"></div>
 
                 <div id="dataBufferControls" style="display: flex; gap: 10px;">
-                    <button id="copyData">Скопировать параметры</button>
-                    <button id="pasteData">Вставить параметры</button>
+                    <button id="copyData" title="Скопировать функцию, область определения и число итераций.">Скопировать
+                        параметры</button>
+                    <button id="pasteData" title="Вставить функцию, область определения и число итераций.">Вставить
+                        параметры</button>
                 </div>
 
                 <div id="optimizationControls" style="display: flex; flex-direction: column; margin:0px;">
@@ -64,65 +68,105 @@
                 </div>
 
                 <div id="bbo_algorithm_tab" class="tab-content">
-                    <label for="bbo_islands_count">Число островов:</label>
-                    <input type="number" id="bbo_islands_count" placeholder="50" min="1" step="1">
+                    <label for="bbo_islands_count">Число особей (островов):</label>
+                    <input type="number" id="bbo_islands_count" placeholder="50" min="1" step="1"
+                        title="Число особей в популяции. Влияет на разнообразие решений. Чем больше — тем выше разнообразие решений и шанс найти глобальный минимум, но растёт время вычислений. Обычно 20-200.">
                     <div class="errorDiv" id="bbo_islands_count_error"></div>
 
+                    <label for="bbo_blending_rate">Вес родителя при миграции:</label>
+                    <input type="number" id="bbo_blending_rate" placeholder="0.1" min="0" max="1" step="0.01"
+                        title="Вес родительской особи при миграции (0–1). Определяет, насколько новое решение наследует черты родителя. Попробуйте 0.1–0.3 для умеренного наследования.">
                     <label for="bbo_mutation_probability">Вероятность мутации:</label>
-                    <input type="number" id="bbo_mutation_probability" placeholder="0.04" min="0" max="1" step="0.01">
+                    <input type="number" id="bbo_mutation_probability" placeholder="0.04" min="0" max="1" step="0.01"
+                        title="Вероятность случайного изменения особи (0–1). Высокое значение увеличивает исследование и разнообразие, но может замедлить сходимость. Малое — повышает стабильность, но рискует застрять в локальном минимуме. Попробуйте 0.01–0.1 для умеренной мутации.">
                     <div class="errorDiv" id="bbo_mutation_probability_error"></div>
 
-                    <label for="bbo_blending_rate">Вес родителя при миграции:</label>
-                    <input type="number" id="bbo_blending_rate" placeholder="0.1" min="0" max="1" step="0.01">
-                    <div class="errorDiv" id="bbo_blending_rate_error"></div>
-
                     <label for="bbo_num_elites">Число элитных особей:</label>
-                    <input type="number" id="bbo_num_elites" placeholder="2" min="0" step="1">
+                    <input type="number" id="bbo_num_elites" placeholder="2" min="0" step="1"
+                        title="Число лучших особей, сохраняемых без изменений. Помогает сохранить качество решений между поколениями. Слишком много элитных — снижает разнообразие, слишком мало — может потеряться прогресс. Попробуйте 1-5% от популяции.">
                     <div class="errorDiv" id="bbo_num_elites_error"></div>
                 </div>
 
                 <div id="cultural_algorithm_tab" class="tab-content">
                     <label for="ca_population_size">Число особей:</label>
-                    <input type="number" id="ca_population_size" placeholder="50" min="1" step="1">
+                    <input type="number" id="ca_population_size" placeholder="50" min="1" step="1"
+                        title="Число особей в популяции. Большая популяция повышает разнообразие решений и устойчивость, но требует больше времени. Алгоритм ресурсоемкий, попробуйте 50–200.">
                     <div class="errorDiv" id="ca_population_size_error"></div>
 
+                    <label for="ca_mutation_scale">Коэффициент влияния приспособленности:</label>
+                    <input type="number" id="ca_mutation_scale" placeholder="0.0"
+                        title="Регулирует шаг мутации в зависимости от приспособленности особи. Если равен 0.0, то дисперсия мутации для всех особей одинакова. Рекомендуется: 0.0–1.0">
+                    <div class="errorDiv" id="ca_mutation_scale_error"></div>
+
+                    <label for="ca_mutational_dispersion">Базовая дисперсия:</label>
+                    <input type="number" id="ca_mutational_dispersion" placeholder="1.0"
+                        title="Базовый разброс гауссовой мутации. Большие значения дают более крупные мутации — расширяют поиск, малые — локальный поиск. Начните с 1.0, корректируйте по результатам. Попробуйте 0.1–10.0">
+                    <div class="errorDiv" id="ca_mutational_dispersion_error"></div>
+
                     <label for="ca_num_accepted">Число принятых особей:</label>
-                    <input type="number" id="ca_num_accepted" placeholder="5" min="0" step="1">
+                    <input type="number" id="ca_num_accepted" placeholder="5" min="0" step="1"
+                        title="Число особей, обновляющих пространство убеждений. Попробуйте 20-30% от размера популяции.">
                     <div class="errorDiv" id="ca_num_accepted_error"></div>
 
                     <label for="ca_belief_space_inertia">Инерция пространства убеждений:</label>
-                    <input type="number" id="ca_belief_space_inertia" placeholder="0.5" min="0" max="1" step="0.01">
+                    <input type="number" id="ca_belief_space_inertia" placeholder="0.5" min="0" max="1" step="0.01"
+                        title="Баланс между старыми и новыми знаниями (0–1). 0 — полностью обновляется по новым данным, 1 — без изменений (эквивалент эволюционной программы).">
                     <div class="errorDiv" id="ca_belief_space_inertia_error"></div>
-
-                    <label for="ca_mutational_dispersion">Мутационная дисперсия:</label>
-                    <input type="number" id="ca_mutational_dispersion" placeholder="1.0">
-                    <div class="errorDiv" id="ca_mutational_dispersion_error"></div>
                 </div>
 
                 <div id="harmony_algorithm_tab" class="tab-content">
-                    <label for="hs_hms">Размер памяти гармоний (HMS):</label>
-                    <input type="number" id="hs_hms" placeholder="30" min="1" step="1">
+                    <label for="hs_hms">Размер памяти гармоний:</label>
+                    <input type="number" id="hs_hms" placeholder="30" min="1" step="1"
+                        title="Число особей в памяти гармоний (HMS). Влияет на разнообразие решений: больше — более разнообразное, но медленнее сходимость; меньше — быстрее, но риск застрять в локальном минимуме. Рекомендуется 20–100.">
                     <div class="errorDiv" id="hs_hms_error"></div>
 
                     <label for="hs_mode">Режим:</label>
-                    <select id="hs_mode">
+                    <select id="hs_mode"
+                        title="Канонический использует фиксированные параметры, адаптивный — динамические">
                         <option value="canonical" selected>Канонический</option>
                         <option value="adaptive">Адаптивный</option>
                     </select>
 
                     <label for="hs_hmcr">Скорость анализа гармонической памяти (HMCR):</label>
-                    <input type="number" id="hs_hmcr" step="0.01" title="Рекомендуется 0.7–0.95" placeholder="0.9">>
+                    <input type="number" id="hs_hmcr" step="0.01" placeholder="0.9"
+                        title="Вероятность выбора значения из памяти гармоний (0–1). Большое значение (ближе к 1) — большее использование предыдущих лучших решений (эксплуатация). Меньшее значение — больше случайных проб (исследование). Рекомендуется 0.7–0.95.">
                     <div class="errorDiv" id="hs_hmcr_error"></div>
 
-                    <label for="hs_par">Cкорость корректировки высоты звучания (PAR):</label>
-                    <input type="number" id="hs_par" step="0.01" title="Рекомендуется 0.1–0.5" placeholder="0.3">>
-                    <div class="errorDiv" id="hs_par_error"></div>
+                    <div id="hs_canonical_params">
+                        <label for="hs_par">Скорость корректировки высоты звучания (PAR):</label>
+                        <input type="number" id="hs_par" step="0.01" placeholder="0.3"
+                            title="Вероятность подстройки решения (0–1), аналог мутации.Большое значение — сильнее локальный поиск, меньшее — более глобальный поиск.Рекомендуется 0.1–0.5.">
+                        <div class="errorDiv" id="hs_par_error"></div>
 
-                    <label for="hs_bw">Дистанционный интервал (BW):</label>
-                    <input type="number" id="hs_bw" step="0.001" title="Обычно 0.001–1.0" placeholder="0.01">
-                    <div class="errorDiv" id="hs_bw_error"></div>
+                        <label for="hs_bw">Дистанционный интервал (BW):</label>
+                        <input type="number" id="hs_bw" step="0.001" placeholder="0.01"
+                            title="Величина изменений при подстройке гармонии.Большое значение — крупные шаги, что помогает выходить из локальных минимумов, но может пропустить минимум. Малое значение — тонкая настройка вокруг текущего решения. Рекомендуется 0.001–0.1.">
+                        <div class="errorDiv" id="hs_bw_error"></div>
+                    </div>
+
+                    <div id="hs_adaptive_params" style="display: none;">
+                        <div>
+                            <label for="hs_par_range">Скорость корректировки высоты звучания:</label>
+                            <div class="range-inline">
+                                от <input type="number" id="hs_par_start" step="0.001" placeholder="0.01"
+                                    title="Минимальное значение PAR. Рекомендуется: 0.01–0.1" class="range-input">
+                                до <input type="number" id="hs_par_end" step="0.001" placeholder="0.99"
+                                    title="Максимальное значение PAR. Рекомендуется: 0.5–0.99" class="range-input">
+                            </div>
+                            <div class="errorDiv" id="hs_par_range_error"></div>
+                        </div>
+                        <div>
+                            <label for="hs_bw_range">Дистанционный интервал:</label>
+                            <div class="range-inline">
+                                от <input type="number" id="hs_bw_start" step="0.001" placeholder="0.05"
+                                    title="Максимальное значение BW. Рекомендуется: 0.01–0.1" class="range-input">
+                                до <input type="number" id="hs_bw_end" step="0.001" placeholder="0.0001"
+                                    title="Минимальное значение BW. Рекомендуется: 0.0001–0.001" class="range-input">
+                            </div>
+                            <div class="errorDiv" id="hs_bw_range_error"></div>
+                        </div>
+                    </div>
                 </div>
-
             </div>
 
 
@@ -150,7 +194,7 @@
                     <div style="display: flex; flex-direction: column; gap: 16px;">
                         <div class="range-inline" style="flex-shrink: 0;">
                             <label for="resolutionInput">Детализация:</label>
-                            <input type="range" id="resolutionInput" min="50" max="250" value="64">
+                            <input type="range" id="resolutionInput" min="50" max="250" value="64" step="1">
                         </div>
                         <div class="range-inline" style="flex-shrink: 0;">
                             <label for="pointSizeInput">Размер особей:</label>
@@ -192,6 +236,207 @@
 
         </div>
     </div>
+
+    <div id="helpModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" id="closeHelpModal">×</span>
+            <h2>Руководство пользователя</h2>
+            <p>
+                <b>1. Выбор метода оптимизации</b><br>
+                В левой панели нажмите на один из следующих алгоритмов:
+            <details class="method-details">
+                <summary><b>Биогеографическая оптимизация</b></summary>
+                Моделирует миграцию видов между островами. Каждая особь (остров) представляет решение, улучшаемое через
+                обмен
+                признаками между особями (миграция) с заданным весом и случайные изменения (мутация). Использует
+                фиксированную
+                вероятность мутации и элитизм для сохранения лучших решений.
+                <details>
+                    <summary><b>Параметры</b></summary>
+                    <ul>
+                        <li><b>Число особей (островов)</b>: Количество решений в популяции. Влияет на разнообразие.</li>
+                        <li><b>Вес родителя при миграции</b>: Доля влияния родительской особи при
+                            обмене признаками.</li>
+                        <li><b>Вероятность мутации</b>: Вероятность случайного изменения
+                            особи (0–1).</li>
+                        <li><b>Число элитных особей</b>: Количество лучших особей, сохраняемых
+                            без изменений.</li>
+                    </ul>
+                </details>
+            </details>
+            <details class="method-details">
+                <summary><b>Культурный алгоритм</b></summary>
+                Имитирует культурную эволюцию, комбинируя популяцию с пространством убеждений, которое хранит знания о
+                лучших
+                решениях. Использует эволюционное программирование с гауссовой мутацией, где дисперсия зависит от
+                приспособленности
+                особи, и турнирный отбор для обновления популяции.
+                <details>
+                    <summary><b>Параметры</b></summary>
+                    <ul>
+                        <li><b>Число особей</b>: Количество решений в популяции. Влияет на
+                            разведку.</li>
+                        <li><b>Коэффициент влияния приспособленности</b>: Регулирует шаг мутации в
+                            зависимости от
+                            приспособленности.</li>
+                        <li><b>Базовая дисперсия</b>: Базовый разброс гауссовой мутации.</li>
+                        <li><b>Число принятых особей</b>: Количество особей,
+                            обновляющих
+                            пространство убеждений.</li>
+                        <li><b>Инерция пространства убеждений</b>: Баланс между старыми и
+                            новыми знаниями.</li>
+                    </ul>
+                </details>
+            </details>
+            <details class="method-details">
+                <summary><b>Алгоритм поиска гармонии</b></summary>
+                Вдохновлён музыкальной импровизацией. Создаёт новые решения (гармонии), комбинируя существующие из
+                памяти гармоний с
+                вероятностной подстройкой, управляемой параметрами HMCR, PAR и BW. В адаптивном режиме PAR изменяется
+                линейно, а BW
+                — экспоненциально.
+                <details>
+                    <summary><b>Параметры</b></summary>
+                    <ul>
+                        <li><b>Размер памяти гармоний (Harmony Memory Size, HMS)</b>: Количество решений в памяти.
+                            Влияет на
+                            разнообразие. Рекомендуется: 10–50.</li>
+                        <li><b>Режим (Mode)</b>: Канонический (фиксированные параметры) или адаптивный (динамические
+                            параметры).</li>
+                        <li><b>Скорость анализа гармонической памяти (Harmony Memory Consideration Rate, HMCR)</b>:
+                            Вероятность выбора
+                            значения из памяти (0–1). Рекомендуется: 0.7–0.95.</li>
+                        <li><b>Скорость корректировки высоты звучания (Pitch Adjustment Rate, PAR, канонический)</b>:
+                            Вероятность
+                            подстройки решения (0–1). Рекомендуется: 0.1–0.5.</li>
+                        <li><b>Дистанционный интервал (Bandwidth, BW, канонический)</b>: Шаг подстройки решения.
+                            Рекомендуется:
+                            0.001–0.1.</li>
+                        <li><b>Диапазон PAR (Pitch Adjustment Rate Range, адаптивный)</b>: Минимальное и максимальное
+                            значения PAR.
+                            Рекомендуется: [0.01, 0.99].</li>
+                        <li><b>Диапазон BW (Bandwidth Range, адаптивный)</b>: Максимальное и минимальное значения BW.
+                            Рекомендуется:
+                            [0.0001, 0.05].</li>
+                    </ul>
+                </details>
+            </details>
+
+            Для каждого метода — свои параметры и графики.<br>
+            Критерий останова: достижение заданного числа итераций.<br><br>
+
+            <b>2. Настройка функции</b><br>
+            В блоке «Настройки»:<br>
+            — введите выражение в поле <i>z = f(x, y)</i> (например, <code>x^2 + y^2</code>)<br>
+            — либо выберите функцию из выпадающего списка;<br>
+            — задайте границы по X и Y; левая граница должна быть меньше правой.<br>
+
+            <b>Допустимый синтаксис:</b><br>
+            — переменные: <code>x</code>, <code>y</code><br>
+            — операторы: <code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>^</code><br>
+            — константы: <code>pi</code>, <code>PI</code> (≈ 3.14), <code>e</code>, <code>E</code> (≈ 2.71)<br><br>
+
+            <b>Доступные функции:</b><br>
+            <details>
+                <summary><b>Арифметические</b></summary>
+                <ul>
+                    <li><code>abs(x)</code> — модуль <code>x</code></li>
+                    <li><code>cbrt(x)</code> — кубический корень <code>x</code></li>
+                    <li><code>exp(x)</code> — экспонента <code>x</code></li>
+                    <li><code>log(x, b)</code> — логарифм <code>x</code> по основанию <code>b</code> (по умолчанию
+                        <code>e</code>)
+                    </li>
+                    <li><code>log10(x)</code> — десятичный логарифм <code>x</code></li>
+                    <li><code>log2(x)</code> — двоичный логарифм <code>x</code></li>
+                    <li><code>sqrt(x)</code> — квадратный корень из <code>x</code></li>
+                </ul>
+            </details>
+            <details>
+                <summary><b>Тригонометрические</b></summary>
+                <ul>
+                    <li><code>sin(x)</code> — синус <code>x</code></li>
+                    <li><code>cos(x)</code> — косинус <code>x</code></li>
+                    <li><code>tan(x)</code> — тангенс <code>x</code></li>
+                    <li><code>asin(x)</code> — арксинус <code>x</code></li>
+                    <li><code>acos(x)</code> — арккосинус <code>x</code></li>
+                    <li><code>atan(x)</code> — арктангенс <code>x</code></li>
+                </ul>
+            </details>
+            <details>
+                <summary><b>Гиперболические</b></summary>
+                <ul>
+                    <li><code>sinh(x)</code> — гиперболический синус <code>x</code></li>
+                    <li><code>cosh(x)</code> — гиперболический косинус <code>x</code></li>
+                    <li><code>tanh(x)</code> — гиперболический тангенс <code>x</code></li>
+                    <li><code>asinh(x)</code> — гиперболический арксинус <code>x</code></li>
+                    <li><code>acosh(x)</code> — гиперболический арккосинус <code>x</code></li>
+                    <li><code>atanh(x)</code> — гиперболический арктангенс <code>x</code></li>
+                </ul>
+            </details>
+            <details>
+                <summary><b>Округление и сравнение</b></summary>
+                <ul>
+                    <li><code>ceil(x)</code> — округление <code>x</code> в большую сторону</li>
+                    <li><code>floor(x)</code> — округление <code>x</code> в меньшую сторону</li>
+                    <li><code>round(x)</code> — округление <code>x</code> до ближайшего целого</li>
+                    <li><code>mod(x, y)</code> — остаток от деления <code>x</code> на <code>y</code></li>
+                    <li><code>max(x, ...)</code> — максимальное значение из аргументов</li>
+                    <li><code>min(x, ...)</code> — минимальное значение из аргументов</li>
+                    <li><code>hypot(x, ...)</code> — квадратный корень из суммы квадратов аргументов</li>
+                </ul>
+            </details>
+            <br>
+            <b>3. Настройка параметров</b><br>
+            Ниже находятся:<br>
+            — поле ввода числа итераций;<br>
+            — специфические параметры выбранного метода.<br>
+            Ошибки подсвечиваются, переключение между методами при наличии ошибок невозможно.<br>
+            Наведите курсор на поля ввода для подсказок о параметрах.<br><br>
+
+            <b>4. Работа с параметрами</b><br>
+            — <b>Скопировать параметры</b>: сохраняет общие настройки: функция, область определения и число
+            итераций.<br>
+            — <b>Вставить параметры</b>: применяет скопированные параметры, если метод не запущен.<br><br>
+
+            <b>5. Управление запуском</b><br>
+            — <b>Оптимизация</b>: запускает алгоритм.<br>
+            — <b>Остановить</b>: завершает работу текущего метода.<br>
+            Повторный запуск блокируется, если задача уже выполняется.<br><br>
+
+            <b>6. Визуализация</b><br>
+            Справа расположен график:<br>
+            — <b>Верхняя часть</b> — 3D-график или график сходимости.<br>
+            — В левом верхнем углу: статус, функция, текущее лучшее решение (координаты X и Y), значение функции,
+            прогресс.<br>
+            — В левом нижнем: кнопки переключения вида графика и отображения траектории.<br>
+            — <b>Управление графиком</b>:<br>
+               вращение — ЛКМ, перемещение — ПКМ, масштабирование — колесо.<br>
+            Красные точки — популяция, синяя — лучшее решение и траектория.<br><br>
+
+            — <b>Нижняя часть</b> — настройки графика:<br>
+               детализация (число сегментов сетки поверхности функции), размер точек популяции, масштаб осей.<br>
+               кнопки: изменить пропорции, показать популяцию/решение, сброс камеры, отображение сетки.<br><br>
+
+            <b>Советы:</b><br>
+            — В полях параметров каждого метода по умолчанию установлены рекомендуемые значения.<br>
+            — Кнопка "Изменить пропорции" позволяет переключать отображение графика между реальными и равными
+            пропорциями.<br>
+            — Рекомендуется отключать отображение траектории и сетки во время оптимизации для ускорения
+            визуализации.<br>
+            — При ошибке в функции или диапазонах появится подсказка под полем.<br>
+            — График сходимости обновляется при переключении или завершении задачи.<br>
+            — Методы работают независимо — можно запустить один и переключиться на другой.<br>
+            — Чем больше размер популяции, тем более разнообразные решения, но медленнее сходимость; меньше — алгоритм
+            работает быстрее, но есть риск застрять в локальном минимуме.<br>
+            — Культурный алгоритм требует больше вычислительных ресурсов, чем другие методы, и склонен преждевременно
+            сужать область убеждений, застревая в локальных минимумах. Начните с минимального влияния культуры и
+            постепенно увеличивайте его.<br>
+            — Алгоритм поиска гармонии требует большего числа итераций для достижения сходимости, чем другие методы (от
+            10000 итераций). <br>
+            </p>
+        </div>
+    </div>
+
 </body>
 
 </html>

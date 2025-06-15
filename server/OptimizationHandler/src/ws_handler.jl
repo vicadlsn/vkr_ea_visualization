@@ -219,7 +219,7 @@ function validate_bbo_params(params)
         ("islands_count", Int),
         ("mutation_probability", Float64),
         ("blending_rate", Float64),
-        ("num_elites", Int)
+        ("num_elites", Int),
     ]
     for (key, typ) in required
         val = parse_param(params, key, typ)
@@ -237,6 +237,7 @@ function validate_bbo_params(params)
     if !(0.0 <= params["mutation_probability"] <= 1.0)
         return false, "mutation_probability must be in [0, 1]"
     end
+   
     if !(0.0 <= params["blending_rate"] <= 1.0)
         return false, "blending_rate must be in [0, 1]"
     end
@@ -255,7 +256,8 @@ function validate_cultural_params(params)
         ("num_accepted", Int),
         ("iterations_count", Int),
         ("inertia", Float64),
-        ("dispersion", Float64)
+        ("gamma", Float64),
+        ("beta", Float64)
     ]
     for (key, typ) in required
         val = parse_param(params, key, typ)
@@ -280,13 +282,22 @@ function validate_cultural_params(params)
             return false, "inertia must be in [0, 1]"
     end
 
+    if  params["gamma"] < 0
+        return false, "gamma must be > 0"
+    end
+
+    if  params["beta"] < 0
+        return false, "beta must be > 0"
+    end
+
     return true, ""
 end
 
 function validate_harmony_params(params)
     required = [
         ("hms", Int),
-        ("iterations_count", Int)
+        ("iterations_count", Int),
+        ("hmcr", Float64),
     ]
     for (key, typ) in required
         val = parse_param(params, key, typ)
@@ -298,19 +309,34 @@ function validate_harmony_params(params)
     if params["hms"] < 1 || params["iterations_count"] < 1
         return false, "hms and iterations_count must be >= 1"
     end
+
+    if !(0.0 <= params["hmcr"] <= 1.0)
+        return false, "hmcr must be in [0,1]"
+    end
+
     mode = get(params, "mode", "canonical")
     if mode == "canonical"
-        for (key, typ) in [("hmcr", Float64), ("par", Float64), ("bw", Float64)]
+        for (key, typ) in [("par", Float64), ("bw", Float64)]
             val = parse_param(params, key, typ)
             if val === nothing
                 return false, "Missing or invalid parameter for canonical mode: $key"
             end
             params[key] = val
         end
-        if !(0.0 <= params["hmcr"] <= 1.0) || !(0.0 <= params["par"] <= 1.0) || params["bw"] < 0
+        if !(0.0 <= params["par"] <= 1.0) || params["bw"] < 0
             return false, "hmcr/par must be in [0,1], bw >= 0"
         end
     elseif mode == "adaptive"
+        for (key, typ) in [("par_start", Float64), ("bw_start", Float64), ("par_end", Float64), ("bw_end", Float64)]
+            val = parse_param(params, key, typ)
+            if val === nothing
+                return false, "Missing or invalid parameter for canonical mode: $key"
+            end
+            params[key] = val
+        end
+        if !(0.0 <= params["par_start"] <= 1.0) || !(0.0 <= params["par_end"] <= 1.0) || params["bw_start"] < 0 || params["bw_end"] < 0
+            return false, "par must be in [0,1], bw >= 0"
+        end
         return true, ""
     else
         return false, "Unknown Harmony Search mode: $mode"
@@ -338,16 +364,16 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
             iterations_count = params["iterations_count"]
             islands_count = params["islands_count"]
             mutation_probability = params["mutation_probability"]
+
             blending_rate = params["blending_rate"]
             num_elites = params["num_elites"]
-            
-            allocated = @allocated begin
-                best_solution, best_fitness = OptimizationAlgorithms.bbo(cancel_flag, f_v, DIMENSION,
-                    lower_bounds, upper_bounds, iterations_count, islands_count;
-                    mutation_probability=mutation_probability, blending_rate=blending_rate,
-                    num_elites=num_elites, send_func=send_iter
-                )
-            end
+
+            best_solution, best_fitness = OptimizationAlgorithms.bbo(cancel_flag, f_v, DIMENSION,
+                lower_bounds, upper_bounds, iterations_count, islands_count;
+                mutation_probability=mutation_probability, blending_rate=blending_rate,
+                num_elites=num_elites, send_func=send_iter
+            )
+
         elseif method_id == "cultural"
             valid, msg = validate_cultural_params(params)
             if !valid
@@ -356,16 +382,15 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
             end
             population_size = params["population_size"]
             inertia = params["inertia"]
-            dispersion = params["dispersion"]
+            gamma = params["gamma"]
             num_accepted = params["num_accepted"]
+            beta=params["beta"]
             dim = DIMENSION
             max_iters = params["iterations_count"]
-            allocated = @allocated begin
-                best_solution, best_fitness = OptimizationAlgorithms.cultural_algorithm(cancel_flag,
-                    f_v, dim, lower_bounds, upper_bounds, max_iters, population_size;
-                    num_accepted=num_accepted, send_func=send_iter, inertia=inertia, dispersion=dispersion
-                )
-            end
+            best_solution, best_fitness = OptimizationAlgorithms.cultural_algorithm(cancel_flag,
+                f_v, dim, lower_bounds, upper_bounds, max_iters, population_size;
+                num_accepted=num_accepted, send_func=send_iter, inertia=inertia, gamma=gamma, beta=beta
+            )
         elseif method_id == "harmony"
             valid, msg = validate_harmony_params(params)
             if !valid
@@ -376,23 +401,25 @@ function optimize(ws::HTTP.WebSocket, f_v, method_id::String, client_id::String,
             hms = params["hms"]
             max_iters = params["iterations_count"]
             mode = get(params, "mode", "canonical")
+            hmcr = params["hmcr"]
+
             if mode == "canonical"
-                hmcr = params["hmcr"]
                 par = params["par"]
                 bw = params["bw"]
-                allocated = @allocated begin
-                    best_solution, best_fitness = OptimizationAlgorithms.harmony_search(cancel_flag,
-                        f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
-                        hmcr=hmcr, par=par, bw=bw, mode="canonical", send_func=send_iter
-                    )
-                end
+
+                best_solution, best_fitness = OptimizationAlgorithms.harmony_search(cancel_flag,
+                    f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
+                    hmcr=hmcr, par=par, bw=bw, mode="canonical", send_func=send_iter
+                )
             elseif mode == "adaptive"
-                allocated = @allocated begin
-                    best_solution, best_fitness = OptimizationAlgorithms.harmony_search(cancel_flag,
-                        f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
-                        mode="adaptive", send_func=send_iter
-                    )
-                end
+                bw_start = params["bw_start"]
+                bw_end = params["bw_end"]
+                par_start = params["par_start"]
+                par_end = params["par_end"]
+                best_solution, best_fitness = OptimizationAlgorithms.harmony_search(cancel_flag,
+                    f_v, dim, lower_bounds, upper_bounds, max_iters, hms;
+                    mode="adaptive", bw_max=bw_start, bw_min=bw_end, par_min=par_start, par_max=par_end, send_func=send_iter
+                )
             else
                 @error "Unknown HS mode" mode=mode
                 send_error(ws, client_id, request_id, "Unknown Harmony Search mode: $mode")
@@ -448,7 +475,7 @@ function send_optimization_data_closure(
                 "population" => population,
                 "best_fitness" => best_fitness,
                 "best_solution" => best_solution
-            ))
+            ))   
             HTTP.WebSockets.send(ws, json_data)
             @debug "Sent iteration data" method_id=method_id iteration=iteration
         catch e

@@ -1,13 +1,14 @@
 __precompile__()
 
-using GeneralizedGenerated
+using RuntimeGeneratedFunctions
+RuntimeGeneratedFunctions.init(@__MODULE__)
 
 const ALLOWED_FUNCTIONS = Dict(
     :sqrt   => (1, 1),
     :cbrt   => (1, 1),
     :abs    => (1, 1),
     :exp    => (1, 1),
-    :log    => (1, 2),  # log(x) или log(base, x)
+    :log    => (1, 2),
     :log10  => (1, 1),
     :log2   => (1, 1),
 
@@ -35,7 +36,7 @@ const ALLOWED_FUNCTIONS = Dict(
 
 const ALLOWED_OPERATORS = Set([:+, :-, :*, :/, :^])
 
-const ALLOWED_VARIABLES = Set([:x, :y, :pi, :π, :PI, :e, :E])
+const ALLOWED_VARIABLES = Set([:x, :y, :pi, :π, :PI, :e, :E, :ℯ])
 
 function validate_expr(expr)
     if expr isa Symbol
@@ -90,7 +91,7 @@ function make_function_v2(f_expr::String)
         return nothing
     end
     f_replaced = replace_constants(f_parsed)
-    f = mk_function(:( (x, y) -> $((f_replaced)) ))
+    f = @RuntimeGeneratedFunction  :( (x, y) -> $(f_replaced) )
     f_wrapped =  v -> f(v[1], v[2])
     return f_wrapped
 end

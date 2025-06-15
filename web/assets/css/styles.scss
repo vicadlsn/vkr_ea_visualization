@@ -395,3 +395,52 @@ button:active,
     gap: 4px;
     white-space: nowrap;
 }
+
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: auto;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.modal-content {
+    background: #fff;
+    padding: 24px 32px;
+    border-radius: 8px;
+    max-width: min(90vw, 700px);
+    width: 90%;
+    min-width: 320px;
+    position: relative;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+@media (max-width: 600px) {
+    .modal-content {
+        padding: 12px 6px;
+        max-width: 98vw;
+        min-width: unset;
+    }
+}
+.close {
+    position: absolute;
+    right: 16px;
+    top: 8px;
+    font-size: 32px;
+    cursor: pointer;
+    color: #888;
+}
+.close:hover {
+    color: #000;
+}
+
+details details,
+.method-details {
+    margin-left: 1.5em;
+}
