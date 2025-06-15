@@ -486,9 +486,6 @@ function send_optimization_data_closure(
 end
 
 function warmup()
-    t_start = time()
-    @info "Запуск warmup для прекомпиляции функций оптимизации"
-    
     f = MathParser.make_function_v2("x^2+y^2")
     
     dim = 2
@@ -519,9 +516,6 @@ function warmup()
     )
     
     MathParser.make_function_v2("sin(e*x^2) + cos(y^2) + E")
-
-    t_total = time() - t_start
-    @info "Warmup занял $t_total секунд"
 end
 
 @setup_workload begin
