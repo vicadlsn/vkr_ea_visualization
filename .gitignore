@@ -1,7 +1,6 @@
 .vscode
 logs
 node_modules
-dist
 help
 .prettierrc
 eslint.config.mjs
