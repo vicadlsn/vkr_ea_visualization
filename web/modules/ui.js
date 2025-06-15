@@ -484,7 +484,7 @@ function setupAlgorithmParams() {
             const elites = parseInt(bboNumElites.value);
 
             // Проверка islandsCount
-            if (!Number.isInteger(islands) || islands <= 0) {
+            if (!Number.isInteger(islands) || islands < 0) {
                 setInput(
                     bboIslandsCount,
                     false,
