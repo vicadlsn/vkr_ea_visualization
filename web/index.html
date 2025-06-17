@@ -13,7 +13,8 @@
 <body>
     <div id="app">
         <div class="container">
-            <div class="sidebar shadow-container">
+            <button id="toggleSidebar" class="sidebar-toggle">Меню</button>
+            <div class="sidebar shadow-container" id="sidebar">
                 <button id="showHelp" style="width:100%;margin-bottom:10px;">Руководство</button>
                 <h2>Метод оптимизации</h2>
                 <div class="tabButtons">
@@ -67,129 +68,132 @@
                     <button id="stopOptimization">Остановить</button>
                 </div>
 
-                <div id="bbo_algorithm_tab" class="tab-content">
-                    <label for="bbo_islands_count">Число особей (островов):</label>
-                    <input type="number" id="bbo_islands_count" placeholder="50" min="1" step="1"
-                        title="Число особей в популяции. Влияет на разнообразие решений. Чем больше — тем выше разнообразие решений и шанс найти глобальный минимум, но растёт время вычислений. Обычно 20-200.">
-                    <div class="errorDiv" id="bbo_islands_count_error"></div>
+                <div id="optimization-settings">
+                    <div id="bbo_algorithm_tab" class="tab-content">
+                        <label for="bbo_islands_count">Число особей (островов):</label>
+                        <input type="number" id="bbo_islands_count" placeholder="50" min="1" step="1"
+                            title="Число особей в популяции. Влияет на разнообразие решений. Чем больше — тем выше разнообразие решений и шанс найти глобальный минимум, но растёт время вычислений. Обычно 20-200.">
+                        <div class="errorDiv" id="bbo_islands_count_error"></div>
 
-                    <label for="bbo_blending_rate">Вес родителя при миграции:</label>
-                    <input type="number" id="bbo_blending_rate" placeholder="0.1" min="0" max="1" step="0.01"
-                        title="Вес родительской особи при миграции (0–1). Определяет, насколько новое решение наследует черты родителя. Попробуйте 0.1–0.3 для умеренного наследования.">
-                    <label for="bbo_mutation_probability">Вероятность мутации:</label>
-                    <input type="number" id="bbo_mutation_probability" placeholder="0.04" min="0" max="1" step="0.01"
-                        title="Вероятность случайного изменения особи (0–1). Высокое значение увеличивает исследование и разнообразие, но может замедлить сходимость. Малое — повышает стабильность, но рискует застрять в локальном минимуме. Попробуйте 0.01–0.1 для умеренной мутации.">
-                    <div class="errorDiv" id="bbo_mutation_probability_error"></div>
+                        <label for="bbo_blending_rate">Вес родителя при миграции:</label>
+                        <input type="number" id="bbo_blending_rate" placeholder="0.1" min="0" max="1" step="0.01"
+                            title="Вес родительской особи при миграции (0–1). Определяет, насколько новое решение наследует черты родителя. Попробуйте 0.1–0.3 для умеренного наследования.">
+                        <label for="bbo_mutation_probability">Вероятность мутации:</label>
+                        <input type="number" id="bbo_mutation_probability" placeholder="0.04" min="0" max="1"
+                            step="0.01"
+                            title="Вероятность случайного изменения особи (0–1). Высокое значение увеличивает исследование и разнообразие, но может замедлить сходимость. Малое — повышает стабильность, но рискует застрять в локальном минимуме. Попробуйте 0.01–0.1 для умеренной мутации.">
+                        <div class="errorDiv" id="bbo_mutation_probability_error"></div>
 
-                    <label for="bbo_num_elites">Число элитных особей:</label>
-                    <input type="number" id="bbo_num_elites" placeholder="2" min="0" step="1"
-                        title="Число лучших особей, сохраняемых без изменений. Помогает сохранить качество решений между поколениями. Слишком много элитных — снижает разнообразие, слишком мало — может потеряться прогресс. Попробуйте 1-5% от популяции.">
-                    <div class="errorDiv" id="bbo_num_elites_error"></div>
-                </div>
-
-                <div id="cultural_algorithm_tab" class="tab-content">
-                    <label for="ca_population_size">Число особей:</label>
-                    <input type="number" id="ca_population_size" placeholder="50" min="1" step="1"
-                        title="Число особей в популяции. Большая популяция повышает разнообразие решений и устойчивость, но требует больше времени. Алгоритм ресурсоемкий, попробуйте 50–200.">
-                    <div class="errorDiv" id="ca_population_size_error"></div>
-
-                    <label for="ca_mutation_scale">Коэффициент влияния приспособленности:</label>
-                    <input type="number" id="ca_mutation_scale" placeholder="0.0"
-                        title="Регулирует шаг мутации в зависимости от приспособленности особи. Если равен 0.0, то дисперсия мутации для всех особей одинакова. Рекомендуется: 0.0–1.0">
-                    <div class="errorDiv" id="ca_mutation_scale_error"></div>
-
-                    <label for="ca_mutational_dispersion">Базовая дисперсия:</label>
-                    <input type="number" id="ca_mutational_dispersion" placeholder="1.0"
-                        title="Базовый разброс гауссовой мутации. Большие значения дают более крупные мутации — расширяют поиск, малые — локальный поиск. Начните с 1.0, корректируйте по результатам. Попробуйте 0.1–10.0">
-                    <div class="errorDiv" id="ca_mutational_dispersion_error"></div>
-
-                    <label for="ca_num_accepted">Число принятых особей:</label>
-                    <input type="number" id="ca_num_accepted" placeholder="5" min="0" step="1"
-                        title="Число особей, обновляющих пространство убеждений. Попробуйте 20-30% от размера популяции.">
-                    <div class="errorDiv" id="ca_num_accepted_error"></div>
-
-                    <label for="ca_belief_space_inertia">Инерция пространства убеждений:</label>
-                    <input type="number" id="ca_belief_space_inertia" placeholder="0.5" min="0" max="1" step="0.01"
-                        title="Баланс между старыми и новыми знаниями (0–1). 0 — полностью обновляется по новым данным, 1 — без изменений (эквивалент эволюционной программы).">
-                    <div class="errorDiv" id="ca_belief_space_inertia_error"></div>
-                </div>
-
-                <div id="harmony_algorithm_tab" class="tab-content">
-                    <label for="hs_hms">Размер памяти гармоний:</label>
-                    <input type="number" id="hs_hms" placeholder="30" min="1" step="1"
-                        title="Число особей в памяти гармоний (HMS). Влияет на разнообразие решений: больше — более разнообразное, но медленнее сходимость; меньше — быстрее, но риск застрять в локальном минимуме. Рекомендуется 20–100.">
-                    <div class="errorDiv" id="hs_hms_error"></div>
-
-                    <label for="hs_mode">Режим:</label>
-                    <select id="hs_mode"
-                        title="Канонический использует фиксированные параметры, адаптивный — динамические">
-                        <option value="canonical" selected>Канонический</option>
-                        <option value="adaptive">Адаптивный</option>
-                    </select>
-
-                    <label for="hs_hmcr">Скорость анализа гармонической памяти (HMCR):</label>
-                    <input type="number" id="hs_hmcr" step="0.01" placeholder="0.9"
-                        title="Вероятность выбора значения из памяти гармоний (0–1). Большое значение (ближе к 1) — большее использование предыдущих лучших решений (эксплуатация). Меньшее значение — больше случайных проб (исследование). Рекомендуется 0.7–0.95.">
-                    <div class="errorDiv" id="hs_hmcr_error"></div>
-
-                    <div id="hs_canonical_params">
-                        <label for="hs_par">Скорость корректировки высоты звучания (PAR):</label>
-                        <input type="number" id="hs_par" step="0.01" placeholder="0.3"
-                            title="Вероятность подстройки решения (0–1), аналог мутации.Большое значение — сильнее локальный поиск, меньшее — более глобальный поиск.Рекомендуется 0.1–0.5.">
-                        <div class="errorDiv" id="hs_par_error"></div>
-
-                        <label for="hs_bw">Дистанционный интервал (BW):</label>
-                        <input type="number" id="hs_bw" step="0.001" placeholder="0.01"
-                            title="Величина изменений при подстройке гармонии.Большое значение — крупные шаги, что помогает выходить из локальных минимумов, но может пропустить минимум. Малое значение — тонкая настройка вокруг текущего решения. Рекомендуется 0.001–0.1.">
-                        <div class="errorDiv" id="hs_bw_error"></div>
+                        <label for="bbo_num_elites">Число элитных особей:</label>
+                        <input type="number" id="bbo_num_elites" placeholder="2" min="0" step="1"
+                            title="Число лучших особей, сохраняемых без изменений. Помогает сохранить качество решений между поколениями. Слишком много элитных — снижает разнообразие, слишком мало — может потеряться прогресс. Попробуйте 1-5% от популяции.">
+                        <div class="errorDiv" id="bbo_num_elites_error"></div>
                     </div>
 
-                    <div id="hs_adaptive_params" style="display: none;">
-                        <div>
-                            <label for="hs_par_range">Скорость корректировки высоты звучания:</label>
-                            <div class="range-inline">
-                                от <input type="number" id="hs_par_start" step="0.001" placeholder="0.01"
-                                    title="Минимальное значение PAR. Рекомендуется: 0.01–0.1" class="range-input">
-                                до <input type="number" id="hs_par_end" step="0.001" placeholder="0.99"
-                                    title="Максимальное значение PAR. Рекомендуется: 0.5–0.99" class="range-input">
-                            </div>
-                            <div class="errorDiv" id="hs_par_range_error"></div>
+                    <div id="cultural_algorithm_tab" class="tab-content">
+                        <label for="ca_population_size">Число особей:</label>
+                        <input type="number" id="ca_population_size" placeholder="50" min="1" step="1"
+                            title="Число особей в популяции. Большая популяция повышает разнообразие решений и устойчивость, но требует больше времени. Алгоритм ресурсоемкий, попробуйте 50–200.">
+                        <div class="errorDiv" id="ca_population_size_error"></div>
+
+                        <label for="ca_mutation_scale">Коэффициент влияния приспособленности:</label>
+                        <input type="number" id="ca_mutation_scale" placeholder="0.0"
+                            title="Регулирует шаг мутации в зависимости от приспособленности особи. Если равен 0.0, то дисперсия мутации для всех особей одинакова. Рекомендуется: 0.0–1.0">
+                        <div class="errorDiv" id="ca_mutation_scale_error"></div>
+
+                        <label for="ca_mutational_dispersion">Базовая дисперсия:</label>
+                        <input type="number" id="ca_mutational_dispersion" placeholder="1.0"
+                            title="Базовый разброс гауссовой мутации. Большие значения дают более крупные мутации — расширяют поиск, малые — локальный поиск. Начните с 1.0, корректируйте по результатам. Попробуйте 0.1–10.0">
+                        <div class="errorDiv" id="ca_mutational_dispersion_error"></div>
+
+                        <label for="ca_num_accepted">Число принятых особей:</label>
+                        <input type="number" id="ca_num_accepted" placeholder="5" min="0" step="1"
+                            title="Число особей, обновляющих пространство убеждений. Попробуйте 20-30% от размера популяции.">
+                        <div class="errorDiv" id="ca_num_accepted_error"></div>
+
+                        <label for="ca_belief_space_inertia">Инерция пространства убеждений:</label>
+                        <input type="number" id="ca_belief_space_inertia" placeholder="0.5" min="0" max="1" step="0.01"
+                            title="Баланс между старыми и новыми знаниями (0–1). 0 — полностью обновляется по новым данным, 1 — без изменений (эквивалент эволюционной программы).">
+                        <div class="errorDiv" id="ca_belief_space_inertia_error"></div>
+                    </div>
+
+                    <div id="harmony_algorithm_tab" class="tab-content">
+                        <label for="hs_hms">Размер памяти гармоний:</label>
+                        <input type="number" id="hs_hms" placeholder="30" min="1" step="1"
+                            title="Число особей в памяти гармоний (HMS). Влияет на разнообразие решений: больше — более разнообразное, но медленнее сходимость; меньше — быстрее, но риск застрять в локальном минимуме. Рекомендуется 20–100.">
+                        <div class="errorDiv" id="hs_hms_error"></div>
+
+                        <label for="hs_mode">Режим:</label>
+                        <select id="hs_mode"
+                            title="Канонический использует фиксированные параметры, адаптивный — динамические">
+                            <option value="canonical" selected>Канонический</option>
+                            <option value="adaptive">Адаптивный</option>
+                        </select>
+
+                        <label for="hs_hmcr">Скорость анализа гармонической памяти (HMCR):</label>
+                        <input type="number" id="hs_hmcr" step="0.01" placeholder="0.9"
+                            title="Вероятность выбора значения из памяти гармоний (0–1). Большое значение (ближе к 1) — большее использование предыдущих лучших решений (эксплуатация). Меньшее значение — больше случайных проб (исследование). Рекомендуется 0.7–0.95.">
+                        <div class="errorDiv" id="hs_hmcr_error"></div>
+
+                        <div id="hs_canonical_params">
+                            <label for="hs_par">Скорость корректировки высоты звучания (PAR):</label>
+                            <input type="number" id="hs_par" step="0.01" placeholder="0.3"
+                                title="Вероятность подстройки решения (0–1), аналог мутации.Большое значение — сильнее локальный поиск, меньшее — более глобальный поиск.Рекомендуется 0.1–0.5.">
+                            <div class="errorDiv" id="hs_par_error"></div>
+
+                            <label for="hs_bw">Дистанционный интервал (BW):</label>
+                            <input type="number" id="hs_bw" step="0.001" placeholder="0.01"
+                                title="Величина изменений при подстройке гармонии.Большое значение — крупные шаги, что помогает выходить из локальных минимумов, но может пропустить минимум. Малое значение — тонкая настройка вокруг текущего решения. Рекомендуется 0.001–0.1.">
+                            <div class="errorDiv" id="hs_bw_error"></div>
                         </div>
-                        <div>
-                            <label for="hs_bw_range">Дистанционный интервал:</label>
-                            <div class="range-inline">
-                                от <input type="number" id="hs_bw_start" step="0.001" placeholder="0.05"
-                                    title="Максимальное значение BW. Рекомендуется: 0.01–0.1" class="range-input">
-                                до <input type="number" id="hs_bw_end" step="0.001" placeholder="0.0001"
-                                    title="Минимальное значение BW. Рекомендуется: 0.0001–0.001" class="range-input">
+
+                        <div id="hs_adaptive_params" style="display: none;">
+                            <div>
+                                <label for="hs_par_range">Скорость корректировки высоты звучания:</label>
+                                <div class="range-inline">
+                                    от <input type="number" id="hs_par_start" step="0.001" placeholder="0.01"
+                                        title="Минимальное значение PAR. Рекомендуется: 0.01–0.1" class="range-input">
+                                    до <input type="number" id="hs_par_end" step="0.001" placeholder="0.99"
+                                        title="Максимальное значение PAR. Рекомендуется: 0.5–0.99" class="range-input">
+                                </div>
+                                <div class="errorDiv" id="hs_par_range_error"></div>
                             </div>
-                            <div class="errorDiv" id="hs_bw_range_error"></div>
+                            <div>
+                                <label for="hs_bw_range">Дистанционный интервал:</label>
+                                <div class="range-inline">
+                                    от <input type="number" id="hs_bw_start" step="0.001" placeholder="0.05"
+                                        title="Максимальное значение BW. Рекомендуется: 0.01–0.1" class="range-input">
+                                    до <input type="number" id="hs_bw_end" step="0.001" placeholder="0.0001"
+                                        title="Минимальное значение BW. Рекомендуется: 0.0001–0.001"
+                                        class="range-input">
+                                </div>
+                                <div class="errorDiv" id="hs_bw_range_error"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-
+            <div class="method-info">
+                <div id="tabStatus"></div>
+                <div id="methodInfoContent">
+                </div>
+            </div>
             <div class="content" style="position: relative;">
-                <div class="graph shadow-container" style="width: 100%; height: 100%;position: relative;">
+                <div id="graph" class="shadow-container" style="width: 100%; height: 100%;position: relative;">
 
                     <div id="graph3d" style="width: 100%; height: 100%;display:block;">
                     </div>
                     <div id="convergencePlot" style="display: none;"></div>
 
-                    <div style="display: flex; flex-direction: row; gap: 10px;">
+                    <div id="graphControls" style="display: flex; flex-direction: row; gap: 10px;">
                         <button id="showSurface" style="width:100px;">График сходимости</button>
                         <button id="showTrajectory" style="width:100px;">Показать траекторию</button>
                     </div>
                 </div>
 
-                <div class="method-info">
-                    <div id="tabStatus"></div>
-                    <div id="methodInfoContent">
-                    </div>
-                </div>
-
-                <div class="controls-container shadow-container" style="display: flex; flex-wrap: wrap; gap: 10px;">
+                <div id="controls-container" class="shadow-container"
+                    style="display: flex; flex-wrap: wrap; gap: 10px;">
 
                     <div style="display: flex; flex-direction: column; gap: 16px;">
                         <div class="range-inline" style="flex-shrink: 0;">

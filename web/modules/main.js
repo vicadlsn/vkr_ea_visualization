@@ -69,6 +69,7 @@ function startOptimization() {
         request_id: request_id,
         method_id: method_id,
         function: tab.currentFunction.function.juliaString,
+        dim: tab.dimension,
         lower_bounds: [boundsX[0], boundsY[0]],
         upper_bounds: [boundsX[1], boundsY[1]],
         iterations_count: tab.iterations_count,

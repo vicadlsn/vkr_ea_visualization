@@ -389,7 +389,6 @@ function setupEventListeners() {
         if (!state.copied) state.copied = {};
         state.copied.function = structuredClone(tabData.currentFunction);
         state.copied.iterations_count = tabData.iterations_count;
-        state.copied;
     });
     pasteDataButton.addEventListener('click', () => {
         if (
@@ -947,4 +946,51 @@ export function initUI() {
         const modal = document.getElementById('helpModal');
         if (event.target === modal) modal.style.display = 'none';
     };
+    document.getElementById('toggleSidebar').onclick = function () {
+        document.getElementById('sidebar').classList.toggle('open');
+    };
+
+    function repositionMethodInfo() {
+        const methodInfo = document.querySelector('.method-info');
+        const sidebar = document.querySelector('.sidebar');
+        const content = document.querySelector('.content');
+        const container = sidebar.parentElement;
+
+        if (!methodInfo || !sidebar || !content || !container) return;
+
+        if (window.innerWidth <= 800) {
+            if (
+                methodInfo.parentElement !== container ||
+                methodInfo.nextElementSibling !== content
+            ) {
+                container.insertBefore(methodInfo, content);
+            }
+        } else {
+            if (methodInfo.parentElement !== content) {
+                content.insertBefore(methodInfo, content.firstChild);
+            }
+        }
+    }
+    repositionMethodInfo();
+    window.addEventListener('resize', repositionMethodInfo);
+
+    function repositionOptimizationControls() {
+        const controls = document.querySelector('#optimizationControls');
+        const sidebar = document.querySelector('.sidebar');
+        const settings = document.querySelector('#optimization-settings');
+
+        if (!controls || !sidebar || !settings) return;
+
+        if (window.innerWidth <= 800) {
+            if (controls.nextElementSibling !== settings.nextSibling) {
+                sidebar.insertBefore(controls, settings.nextSibling);
+            }
+        } else {
+            if (controls.nextElementSibling !== settings) {
+                sidebar.insertBefore(controls, settings);
+            }
+        }
+    }
+    repositionOptimizationControls();
+    window.addEventListener('resize', repositionOptimizationControls);
 }

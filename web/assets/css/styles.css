@@ -57,8 +57,8 @@ body {
 }
 
 .sidebar {
-  width: min(320px, 30vw);
-  margin-right: 20px; /* Отступ между блоками */
+  width: min(320px, 50vw);
+  margin-right: 20px;
   border-top-left-radius: 41px;
   border-bottom-left-radius: 41px;
   overflow-y: auto;
@@ -72,7 +72,7 @@ select {
 }
 
 /* График */
-.graph {
+#graph {
   width: 100%;
   height: 100%;
   border-top-right-radius: 41px;
@@ -89,23 +89,23 @@ select {
 }
 
 /* Контейнер для управления графиком */
-.controls-container {
+#controls-container {
   width: 100%;
   border-top-right-radius: 41px;
   border-bottom-right-radius: 41px;
   height: auto;
   overflow: hidden;
   display: flex;
-  align-items: center; /* Выравнивание по вертикали */
+  align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap; /* перенос элементов на новые строки, если не помещаются */
+  flex-wrap: wrap;
   gap: 15px;
   box-sizing: border-box;
   color: #595959;
   padding: 0px 20px 10px 20px;
 }
 
-.controls-container button {
+#controls-container button {
   padding: 8px 16px;
 }
 
@@ -376,7 +376,7 @@ button:active,
   overflow-y: auto;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 800px) {
   .modal-content {
     padding: 12px 6px;
     max-width: 98vw;
@@ -399,6 +399,108 @@ button:active,
 details details,
 .method-details {
   margin-left: 1.5em;
+}
+
+@media (max-width: 800px) {
+  .container {
+    flex-direction: column;
+    overflow: visible;
+    padding: 0px 12px;
+  }
+  .content {
+    min-height: 700px;
+    order: 3; /* График ниже боковой панели */
+    margin-top: 0;
+    padding: 0px 12px !important;
+    overflow: visible !important;
+  }
+  .sidebar {
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    overflow: hidden;
+    max-height: 0;
+    padding: 0 20px !important;
+    width: 100%;
+    height: auto;
+    order: 1;
+    border-radius: 41px;
+  }
+  .sidebar.open {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    min-height: 100vh !important;
+    padding: 12px 20px !important;
+    margin: 0 12px;
+    overflow-y: auto !important;
+    width: calc(100% - 24px);
+    box-sizing: border-box;
+  }
+  .sidebar-toggle {
+    display: block;
+    width: calc(100% - 24px);
+    margin: 12px 12px 8px;
+  }
+  #graph {
+    height: 100%;
+    border-radius: 41px;
+  }
+  #convergencePlot {
+    height: 100%;
+  }
+}
+@media (max-width: 600px) {
+  #controls-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    height: auto;
+    overflow: visible;
+    border-radius: 41px;
+    padding: 12px 24px !important;
+    margin: 0 0 10px 0;
+  }
+  #controls-container button {
+    width: 100%;
+    min-width: 120px;
+    min-height: 40px;
+    box-sizing: border-box;
+    font-size: 13px;
+    margin: 0;
+    padding: 3px 8px;
+    line-height: 1.2;
+  }
+  #controls-container input[type=number] {
+    max-width: 60px;
+    font-size: 13px;
+  }
+  .range-inline label {
+    font-size: 13px;
+    margin-right: 4px;
+    white-space: nowrap;
+  }
+  #controls-container input[type=range] {
+    width: 100%;
+    font-size: 13px;
+  }
+  .aspect-ratio-group {
+    gap: 4px;
+  }
+}
+@media (min-width: 801px) {
+  .sidebar-toggle {
+    display: none;
+  }
+}
+@media (max-width: 800px) {
+  .method-info {
+    position: relative;
+    top: 0;
+    left: 0;
+    margin: 0px 12px;
+    z-index: 15;
+    pointer-events: none;
+    order: 2;
+  }
 }
 
 /*# sourceMappingURL=styles.css.map */

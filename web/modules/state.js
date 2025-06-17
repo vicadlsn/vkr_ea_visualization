@@ -51,6 +51,7 @@ export const state = {
                 boundsY: [-5, 5],
                 builtin: '',
             },
+            dimension: 2,
             plotSettings: {
                 resolution: 50,
                 pointSize: 0.08,
@@ -83,6 +84,7 @@ export const state = {
                 boundsY: [-5, 5],
                 builtin: '',
             },
+            dimension: 2,
             plotSettings: {
                 resolution: 50,
                 pointSize: 0.08,
@@ -118,6 +120,7 @@ export const state = {
                 boundsY: [-5, 5],
                 builtin: '',
             },
+            dimension: 2,
             plotSettings: {
                 resolution: 50,
                 pointSize: 0.08,

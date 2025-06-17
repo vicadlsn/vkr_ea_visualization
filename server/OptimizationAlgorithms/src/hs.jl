@@ -23,7 +23,7 @@ function generate_new_harmony(harmonies::Matrix{Float64}, lower_bound, upper_bou
             # Выбор значения из памяти гармоний
             idx = rand(1:hms)
             new_harmony[j] = harmonies[j, idx]
-            # С вероятностью par настраиваем высоту (pitch adjustment)
+            # С вероятностью par настраиваем высоту
             if rand() < par
                 delta = (mode == "adaptive" ? bw[j] : bw) * (2 * rand() - 1)
                 new_harmony[j] += delta
