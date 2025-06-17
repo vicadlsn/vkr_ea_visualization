@@ -483,12 +483,12 @@ function setupAlgorithmParams() {
             const elites = parseInt(bboNumElites.value);
 
             // Проверка islandsCount
-            if (!Number.isInteger(islands) || islands < 0) {
+            if (!Number.isInteger(islands) || islands < 0 || islands > 1000) {
                 setInput(
                     bboIslandsCount,
                     false,
                     bboIslandsCountErrorDiv,
-                    'Число островов должно быть целым положительным числом',
+                    'Число островов должно быть целым числом в пределах от 1 до 1000.',
                 );
                 return;
             }
@@ -536,12 +536,12 @@ function setupAlgorithmParams() {
             const elites = parseInt(bboNumElites.value);
 
             // Проверка islandsCount
-            if (!Number.isInteger(elites) || elites <= 0) {
+            if (!Number.isInteger(elites) || elites < 0) {
                 setInput(
                     bboNumElites,
                     false,
                     bboNumElitesErrorDiv,
-                    'Число элитных островов должно положительным целым числом',
+                    'Число элитных островов должно целым неотрицательным числом',
                 );
                 return;
             }
@@ -601,7 +601,7 @@ function setupAlgorithmParams() {
             let valid = true;
 
             // Проверка count
-            if (!Number.isInteger(count) || count <= 0) {
+            if (!Number.isInteger(count) || count <= 0 || count > 1000) {
                 if (source === 'count') {
                     setInput(
                         caPopulationSize,
@@ -733,7 +733,7 @@ function setupAlgorithmParams() {
             hsHmsInput,
             parseInt,
             (val) => (hsState.hms = val),
-            (val) => Number.isInteger(val) && val >= 1,
+            (val) => Number.isInteger(val) && val >= 1 && val <= 1000,
             hsHmsErrorDiv,
             'Значение должно быть целым и больше 0.',
         );

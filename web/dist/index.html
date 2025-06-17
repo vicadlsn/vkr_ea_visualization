@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Визуализация алгоритмов эволюционной оптимизации</title>
     <link rel="icon" href="/assets/favicon-CMqfOQ93.ico" type="image/x-icon">
-  <script type="module" crossorigin src="/assets/index-F95nVP7T.js"></script>
+  <script type="module" crossorigin src="/assets/index-BdEEvkx6.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-Fp0CfcTf.css">
 </head>
 
@@ -76,8 +76,10 @@
                         <div class="errorDiv" id="bbo_islands_count_error"></div>
 
                         <label for="bbo_blending_rate">Вес родителя при миграции:</label>
-                        <input type="number" id="bbo_blending_rate" placeholder="0.1" min="0" max="1" step="0.01"
+                        <input type="number" id="bbo_blending_rate" placeholder="0.1" step="0.01"
                             title="Вес родительской особи при миграции (0–1). Определяет, насколько новое решение наследует черты родителя. Попробуйте 0.1–0.3 для умеренного наследования.">
+                        <div class="errorDiv" id="bbo_blending_rate_error"></div>
+
                         <label for="bbo_mutation_probability">Вероятность мутации:</label>
                         <input type="number" id="bbo_mutation_probability" placeholder="0.04" min="0" max="1"
                             step="0.01"
